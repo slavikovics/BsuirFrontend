@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .sidenav {
+            height: 100%;
+            width: 250px;
+            position: fixed;
+            user-select: none;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            background-color: #1c1c1c;
+            padding-top: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidenav a {
+            padding: 15px 25px;
+            text-decoration: none;
+            font-size: 16px;
+            color: #818181;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .sidenav a:hover {
+            color: #f1f1f1;
+            background-color: #404040;
+        }
+
+        .sidenav .logo {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 24px;
+            color: #818181;
+            border-bottom: 1px solid #404040;
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            margin-left: 250px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidenav">
+        <div class="logo">
+            <img width="40%" height="40%" src="https://mniirm.by/upload/medialibrary/b31/b31b373fc87d8c57bea4ac4ebb4d4727.png"></img>
+            <h5>Интеллектуальный ассистент по университету</h5>
+        </div>
+        <a href="#chat">Чат</a>
+        <a href="#settings">Об ассистенте</a>
+    </div>
+    <div class="main-content">
+        <div class="chat-container" id="chat-container">
+        </div>
+        <div class="chat-input-container">
+            <input type="text" id="user-input" placeholder="Введите ваше сообщение...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+    <style>
+        .chat-container {
+            height: calc(100vh - 85px); 
+            scroll-margin: 0;
+            display: flex;
+            user-select: none;
+            flex-direction: column;
+            position: relative;
+            overflow-y: scroll;
+            padding-right: 20px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 80px; /* Add space for input container */
+            /*scrollbar-width: thin;*/
+            scrollbar-color: #404040 #1a1a1a;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background-color: #1a1a1a;
+            border-radius: 4px;
+        }
+
+        .chat-input-container {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: calc(100% - 250px);
+            background-color: #121212;
+            padding: 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1A1A1A;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+    </style>
+
+    <style>
+        .chat-messages {
+            flex-grow: 1;
+            overflow: hidden;
+            overflow-y: auto;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .chat-input-container {
+            display: flex;
+            user-select: none;
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 12px;
+            margin: 10px;
+            border: 1px solid #252323;
+            background-color: #1a1a1a;
+            border-radius: 15px;
+            font-size: 16px;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #send-button {
+            padding: 12px 24px;
+            margin: 10px;
+            margin-left: 0px;
+            border: none;
+            border-radius: 15px;
+            border: 1px solid #252323;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-size: 16px;
+            cursor: pointer;
+            transform: translateY(0);
+            transform: translateY(0);
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #send-button:hover {
+            border-color: #42386e;
+            box-shadow: 0 0 8px rgba(66, 56, 110, 0.3);
+            transition: all 0.5s ease;
+            animation: glowingBorder 4s ease-in-out infinite;
+        }
+
+        #send-button:focus {
+            outline: none;
+            background-color: #42386e;
+        }
+
+        #user-input:hover {
+            border-color: #42386e;
+            box-shadow: 0 0 8px rgba(66, 56, 110, 0.3);
+            transition: all 0.5s ease;
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: #42386e;
+            background-color: #29263b;
+            animation: glowingBorder 4s ease-in-out infinite;
+            transition: all 0,5s ease;
+        }
+
+        input::placeholder {
+            user-select: none; 
+        }
+
+        @keyframes glowingBorder {
+            0% {
+                box-shadow: 0 0 16px rgba(66, 56, 110, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 32px rgba(66, 56, 110, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 16px rgba(66, 56, 110, 0.3);
+            }
+
+        }
+    </style>
+
+</body>
+</html>
+
+<script>
+    function removeAnimations(chatContainer) {
+        const children = chatContainer.children;
+        if (!children) return;
+
+        for (let child of children) {
+            child.style.animation = 'none';
+            child.style.backgroundColor = '#1e1d26';
+        }
+    }
+
+    function addMessageToChat(message) {
+        const chatContainer = document.getElementById('chat-container');
+        removeAnimations(chatContainer)
+
+        const messageElement = document.createElement('div');
+        const defaultScrollHeight = chatContainer.scrollHeight;
+
+        messageElement.className = 'message';
+        messageElement.style.opacity = '0';
+        messageElement.style.backgroundColor = '#29263b';
+        messageElement.style.marginLeft = 'auto';
+        messageElement.style.marginRight = '0';
+
+        messageElement.style.maxWidth = '60%';
+        messageElement.style.minWidth = '100px';
+
+        messageElement.style.color = '#ffffff';
+        messageElement.style.padding = '15px 20px';
+        messageElement.style.width = 'fit-content'; // Allow width to fit content
+
+        chatContainer.appendChild(messageElement);
+
+
+        // Animate the border/container expansion
+        setTimeout(() => {
+            messageElement.style.transition = 'max-width 0.5s ease-out, opacity 0.3s ease-in';
+            messageElement.style.opacity = '1';
+            messageElement.style.animation = 'glowingBorder 4s ease-in-out infinite';
+        //}, 100);
+
+        // Animate the text appearing letter by letter
+        let index = 0;
+        const textInterval = setInterval(() => {
+            if (index < message.length) {
+                const span = document.createElement('span');
+                span.textContent = message[index];
+                span.style.opacity = '0';
+                messageElement.appendChild(span);
+                
+                // Fade in each letter
+                setTimeout(() => {
+                    span.style.transition = 'opacity 0.1s ease-in';
+                    span.style.opacity = '1';
+                }, 50);
+                
+                index++;
+            } else {
+                clearInterval(textInterval);
+            }
+        }, 10);
+
+                const startTime = performance.now();
+                const duration = 800; // Длительность анимации
+                const scrollDiff = chatContainer.scrollHeight - defaultScrollHeight;
+
+                function scrollStep(timestamp) {
+                    const elapsed = timestamp - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    chatContainer.scrollTop = chatContainer.scrollHeight + scrollDiff * progress;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(scrollStep);
+                    }
+                }
+
+                requestAnimationFrame(scrollStep);
+        }, 100);
+    }
+
+    document.getElementById('send-button').addEventListener('click', function() {
+        const userInput = document.getElementById('user-input');
+        const message = userInput.value.trim();
+        
+        if (message) {
+            addMessageToChat(message);
+            userInput.value = '';
+        }
+    });
+
+    // Also trigger on Enter key
+    document.getElementById('user-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const message = this.value.trim();
+            if (message) {
+                addMessageToChat(message);
+                this.value = '';
+            }
+        }
+    });
+</script>
+
+<style>
+    .message {
+        background-color: '#29263b';
+        user-select: text;
+        max-height: 100%;
+        flex-shrink: 0;
+        border-radius: 10px;
+        margin: 10px 0;
+        border: 1px solid #42386e;
+    }
+</style>
