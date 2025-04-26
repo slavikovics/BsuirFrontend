@@ -12,7 +12,7 @@
         }
 
         .sidenav {
-            height: 100vh;
+            height: 100dvh;
             width: clamp(250px, 25vw, 250px);
             position: fixed;
             user-select: none;
@@ -31,6 +31,10 @@
 
         #toggleButton {
             margin-top: 20px;
+        }
+
+        button:focus{
+            outline: none;
         }
 
         .sidenav a {
@@ -57,7 +61,7 @@
         }
 
         .main-content {
-            height: 100vh;
+            height: 100dvh;
             position: relative;
             display: flex;
             flex-direction: column;
@@ -141,6 +145,14 @@
             bottom: 40px;
             right: 10px;
             margin-right: 10px;
+        }
+
+        button,
+        input[type="button"],
+        input[type="submit"],
+        a {
+            -webkit-tap-highlight-color: transparent; /* Для мобильных */
+            user-select: none; /* Запрет выделения */
         }
 
         .chat-input-container {
