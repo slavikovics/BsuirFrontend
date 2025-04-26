@@ -268,6 +268,19 @@
             }
 
         }
+
+        @keyframes glowingBorderBlue {
+            0% {
+                box-shadow: 0 0 16px rgba(34, 64, 128, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 32px rgba(34, 64, 128, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 16px rgba(34, 64, 128, 0.3);
+            }
+
+        }
     </style>
 
 </body>
@@ -277,6 +290,10 @@
     const sidenav = document.getElementById('sidenav');
     const mainContent = document.getElementById('mainContent');
     const toggleButton = document.getElementById('toggleButton');
+
+    addBotMessageToChat('Здравствуйте! Я ассистент по университету. Как я могу помочь вам сегодня?');
+
+    sidenav.classList.add('collapsed');
 
     toggleClose.addEventListener('click', () => {
         sidenav.classList.toggle('collapsed');
@@ -295,39 +312,19 @@
 
         for (let child of children) {
             child.style.animation = 'none';
-            child.style.backgroundColor = '#1e1d26';
+            child.style.backgroundColor.opacity = '0.9';
         }
     }
 
-    function addMessageToChat(message) {
-        const chatContainer = document.getElementById('chat-container');
-        removeAnimations(chatContainer)
+    function AnimateExpansion(messageElement, message, chatContainer, borderAnimationName){
+        // Animate the border/container expansion
 
-        const messageElement = document.createElement('div');
         const defaultScrollHeight = chatContainer.scrollHeight;
 
-        messageElement.className = 'message';
-        messageElement.style.opacity = '0';
-        messageElement.style.backgroundColor = '#29263b';
-        messageElement.style.marginLeft = 'auto';
-        messageElement.style.marginRight = '0';
-
-        messageElement.style.maxWidth = '60%';
-        messageElement.style.minWidth = '100px';
-        //messageElement.style.maxHeight = '100%';
-
-        messageElement.style.color = '#ffffff';
-        messageElement.style.padding = '15px 20px';
-        messageElement.style.width = 'fit-content'; // Allow width to fit content
-
-        chatContainer.appendChild(messageElement);
-
-
-        // Animate the border/container expansion
         setTimeout(() => {
             messageElement.style.transition = 'max-width 0.5s ease-out, opacity 0.3s ease-in';
             messageElement.style.opacity = '1';
-            messageElement.style.animation = 'glowingBorder 4s ease-in-out infinite';
+            messageElement.style.animation = borderAnimationName + ' 4s ease-in-out infinite';
         //}, 100);
 
         // Animate the text appearing letter by letter
@@ -369,13 +366,79 @@
         }, 100);
     }
 
+    function addUserMessageToChat(message) {
+        const chatContainer = document.getElementById('chat-container');
+        removeAnimations(chatContainer)
+
+        const messageElement = document.createElement('div');
+
+        messageElement.className = 'message';
+        messageElement.style.backgroundColor = '#29263b';
+
+        chatContainer.appendChild(messageElement);
+
+        AnimateExpansion(messageElement, message, chatContainer, "glowingBorder");
+
+        // // Animate the text appearing letter by letter
+        // let index = 0;
+        // const textInterval = setInterval(() => {
+        //     if (index < message.length) {
+        //         const span = document.createElement('span');
+        //         span.textContent = message[index];
+        //         span.style.opacity = '0';
+        //         messageElement.appendChild(span);
+                
+        //         // Fade in each letter
+        //         setTimeout(() => {
+        //             span.style.transition = 'opacity 0.1s ease-in';
+        //             span.style.opacity = '1';
+        //         }, 50);
+                
+        //         index++;
+        //     } else {
+        //         clearInterval(textInterval);
+        //     }
+        // }, 10);
+
+        //         const startTime = performance.now();
+        //         const duration = 800; // Длительность анимации
+        //         const scrollDiff = chatContainer.scrollHeight - defaultScrollHeight;
+
+        //         function scrollStep(timestamp) {
+        //             const elapsed = timestamp - startTime;
+        //             const progress = Math.min(elapsed / duration, 1);
+        //             chatContainer.scrollTop = chatContainer.scrollHeight + scrollDiff * progress;
+
+        //             if (progress < 1) {
+        //                 requestAnimationFrame(scrollStep);
+        //             }
+        //         }
+
+        //         requestAnimationFrame(scrollStep);
+        // }, 100);
+    }
+
+    function addBotMessageToChat(message){
+        const chatContainer = document.getElementById('chat-container');
+        removeAnimations(chatContainer)
+
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message bot';
+
+        messageElement.style.backgroundColor = '#131926';
+        chatContainer.appendChild(messageElement);
+
+        AnimateExpansion(messageElement, message, chatContainer, "glowingBorderBlue");
+    }
+
     document.getElementById('send-button').addEventListener('click', function() {
         const userInput = document.getElementById('user-input');
         const message = userInput.innerText.trim();
         
         if (message) {
-            addMessageToChat(message);
+            addUserMessageToChat(message);
             clearInput(userInput);
+            addBotMessageToChat('Извините, я не могу ответить на этот вопрос.');
         }
     });
 
@@ -386,7 +449,8 @@
             clearInput(this);
 
             if (message) {
-                addMessageToChat(message);
+                addUserMessageToChat(message);
+                addBotMessageToChat('Извините, я не могу ответить на этот вопрос.');
             }
         }
     });
@@ -434,10 +498,28 @@
         background-color: '#29263b';
         user-select: text;
         flex-shrink: 0;
+        opacity: 0;
         border-radius: 10px;
-        margin: 10px 0;
+        max-width: 60%;
+        min-width: 100px;
+        color: #ffffff;
+        padding: 15px 20px;
+        width: fit-content; 
+        margin-left: auto;
+        margin-right: 0;
+        margin-top: 10px;
+        margin-bottom: 10px;
+
         border: 1px solid #42386e;
         word-wrap: break-word; /* Позволяет переносить длинные слова */
         overflow-wrap: break-word; /* Для лучшей поддержки */
+    }
+
+    .message.bot {
+        border: 1px solid #243557;
+        background-color: #131926;
+        margin-left: 20px;
+        margin-right: auto;
+        padding-left: 10px;
     }
 </style>
