@@ -22,15 +22,15 @@
             background-color: #1c1c1c;
             padding-top: 20px;
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s ease; /* Анимация сдвига */
+            transition: transform 0.3s ease;
         }
 
         .sidenav.collapsed {
-            transform: translateX(-100%); /* Сдвинуть влево */
+            transform: translateX(-100%);
         }
 
         #toggleButton {
-            margin-top: 20px; /* Отступ для кнопки */
+            margin-top: 20px;
         }
 
         .sidenav a {
@@ -74,14 +74,18 @@
         </div>
         <a href="#chat">Чат</a>
         <a href="#settings">Об ассистенте</a>
-        <button class="button" id="toggleButton">Свернуть</button>
     </div>
     <div class="main-content" id="mainContent">
         <div class="chat-container" id="chat-container">
         </div>
         <div class="chat-input-container">
+            <button class="button" id="toggleButton">
+                <img src="expand.svg" alt="Expand" width="28" height="28"/>
+            </button>
             <input type="text" id="user-input" placeholder="Введите ваше сообщение...">
-            <button class="button" id="send-button">Send</button>
+            <button class="button" id="send-button">
+                <img src="send-2.svg" alt="Send" width="28" height="28"/>
+            </button>
         </div>
     </div>
     <style>
@@ -99,8 +103,7 @@
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            margin-bottom: 80px; /* Add space for input container */
-            /*scrollbar-width: thin;*/
+            margin-bottom: 80px;
             scrollbar-color: #404040 #1a1a1a;
         }
 
@@ -117,6 +120,13 @@
             border-radius: 4px;
         }
 
+        #toggleButton{
+            padding: 10px 10px 5px 10px;
+            margin-left: 10px;
+            margin-right: 0px;
+            margin-top: 8px;
+        }
+
         .chat-input-container {
             bottom: 0;
             right: 0;
@@ -124,6 +134,10 @@
             background-color: #121212;
             padding: 20px;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            user-select: none;
+            gap: 10px;
+            padding: 10px 0;
         }
 
         ::-webkit-scrollbar {
@@ -155,13 +169,6 @@
             margin-bottom: 20px;
         }
 
-        .chat-input-container {
-            display: flex;
-            user-select: none;
-            gap: 10px;
-            padding: 10px 0;
-        }
-
         #user-input {
             flex-grow: 1;
             padding: 12px;
@@ -175,10 +182,10 @@
         }
 
         .button{
-            padding: 12px 24px;
-            margin: 10px;
-            margin-left: 0px;
-            border: none;
+            padding: 10px;
+            margin-right: 10px;
+            margin-top: auto;
+            margin-bottom: auto;
             border-radius: 15px;
             border: 1px solid #252323;
             background-color: #1a1a1a;
@@ -188,6 +195,11 @@
             transform: translateY(0);
             transform: translateY(0);
             font-family: 'Montserrat', sans-serif;
+        }
+
+        #send-button{
+            padding: 10px 10px 5px 10px;
+
         }
 
         .button:hover{
@@ -245,7 +257,6 @@
     toggleButton.addEventListener('click', () => {
         sidenav.classList.toggle('collapsed');
         mainContent.classList.toggle('expanded');
-        toggleButton.textContent = sidenav.classList.contains('collapsed') ? 'Развернуть' : 'Свернуть';
     });
 
     function removeAnimations(chatContainer) {
@@ -354,7 +365,6 @@
     .message {
         background-color: '#29263b';
         user-select: text;
-        /*max-height: 100%;*/
         flex-shrink: 0;
         border-radius: 10px;
         margin: 10px 0;
