@@ -1,0 +1,12 @@
+.main-content {
+    height: 100dvh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    transition: margin-left 0.3s ease;
+}
+
+.main-content.expanded{
+    margin-left: 0px;
+}

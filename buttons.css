@@ -1,0 +1,65 @@
+#toggleButton {
+    margin-top: 20px;
+}
+
+button:focus{
+    outline: none;
+}
+
+#toggleOpen{
+    padding: 10px 10px 5px 10px;
+    margin-left: 10px;
+    margin-bottom: 8px;
+    margin-right: 0px;
+}
+
+#toggleClose{
+    padding: 10px 10px 5px 10px;
+    position: absolute;
+    bottom: 40px;
+    right: 10px;
+    margin-right: 10px;
+}
+
+button,
+input[type="button"],
+input[type="submit"],
+a {
+    -webkit-tap-highlight-color: transparent; /* Для мобильных */
+    user-select: none; /* Запрет выделения */
+}
+
+.button{
+    padding: 10px;
+    margin-right: 10px;
+    margin-top: auto;
+    margin-bottom: auto;
+    border-radius: 15px;
+    border: 1px solid #252323;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    font-size: 16px;
+    cursor: pointer;
+    transform: translateY(0);
+    transform: translateY(0);
+    font-family: 'Montserrat', sans-serif;
+}
+
+#send-button{
+    padding: 10px 10px 5px 10px;
+    margin-right: 10px;
+    margin-bottom: 8px;
+
+}
+
+.button:hover{
+    border-color: #42386e;
+    box-shadow: 0 0 8px rgba(66, 56, 110, 0.3);
+    transition: all 0.5s ease;
+    animation: glowingBorder 4s ease-in-out infinite;
+}
+
+.button:focus{
+    outline: none;
+    background-color: #42386e;
+}
