@@ -16,6 +16,44 @@ toggleOpen.addEventListener('click', () => {
     mainContent.classList.toggle('expanded');
 });
 
+async function sendMessageToOpenRouter(messageText) {
+    const endpointUrl = 'https://localhost:7029/Bsuir';
+    
+    try {
+        const response = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(messageText),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const errorMessage = errorData?.error?.message || await response.text();
+            throw new Error(`HTTP error! status: ${response.status}. Message: ${errorMessage}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Endpoint Error:', error);
+        throw error;
+    }
+}
+
+function responseToMessage(messageText) {
+    sendMessageToOpenRouter(messageText)
+        .then(response => {
+            const botResponse = response?.choices?.[0]?.message?.content || 
+                               'Не удалось получить ответ от модели';
+            addBotMessageToChat(botResponse);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            addBotMessageToChat('Извините, произошла ошибка: ' + 
+                              (error.message || 'Попробуйте еще раз позже'));
+        });
+}
 
 function removeAnimations(chatContainer) {
     const children = chatContainer.children;
@@ -92,12 +130,17 @@ function addBotMessageToChat(message){
     removeAnimations(chatContainer)
 
     const messageElement = document.createElement('div');
+
+    messageElement.classList.add('markdown-content');
+    messageElement.innerHTML = renderMarkdown(message);
+
+    initDarkSyntaxHighlighting();
     messageElement.className = 'message bot';
 
     messageElement.style.backgroundColor = '#131926';
     chatContainer.appendChild(messageElement);
 
-    AnimateExpansion(messageElement, message, chatContainer, "glowingBorderBlue");
+    AnimateExpansion(messageElement, '', chatContainer, "glowingBorderBlue");
 }
 
 document.getElementById('send-button').addEventListener('click', function() {
@@ -107,7 +150,7 @@ document.getElementById('send-button').addEventListener('click', function() {
     if (message) {
         addUserMessageToChat(message);
         clearInput(userInput);
-        addBotMessageToChat('Извините, я не могу ответить на этот вопрос.');
+        responseToMessage(message)
     }
 });
 
@@ -118,7 +161,7 @@ document.getElementById('user-input').addEventListener('keypress', function(e) {
 
         if (message) {
             addUserMessageToChat(message);
-            addBotMessageToChat('Извините, я не могу ответить на этот вопрос.');
+            responseToMessage(message)
         }
     }
 });
@@ -146,5 +189,149 @@ function checkPlaceholder() {
     }
 }
 
+function renderMarkdown(content, forcePlainText = false) {
+    const isMarkdown = !forcePlainText && /^[\s\S]*([*_`#\[!]|```|\-\s|\d\.\s)/.test(content);
+    
+    if (isMarkdown) {
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            smartypants: true,
+            xhtml: true
+        });
+        
+        let htmlContent = marked.parse(content);
+        
+        htmlContent = htmlContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+        htmlContent = htmlContent.replace(
+            /<table>[\s\S]*?<\/table>/g, 
+            match => `<div class="table-container">${match}</div>`
+        );
+        
+        return htmlContent;
+    } else {
+        const escapedContent = content
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        
+        return escapedContent.replace(/\n/g, '<br>');
+    }
+}
+
+/**
+ * Наверное не нужно (но надо проверить)
+ * Включает подсветку синтаксиса для блоков кода
+ * @param {Element|string} [target] - Элемент DOM или селектор (опционально)
+ */
+function highlightCode(target = document) {
+    // Проверяем доступность hljs
+    if (typeof hljs === 'undefined') {
+      console.warn('Highlight.js not loaded! Skipping syntax highlighting.');
+      return;
+    }
+  
+    // Получаем целевой элемент
+    const container = typeof target === 'string' 
+      ? document.querySelector(target) 
+      : target;
+  
+    if (!container) {
+      console.warn('Target element not found:', target);
+      return;
+    }
+  
+    // Настройки для автоопределения языков
+    hljs.configure({
+      languages: [], // Автодетект всех языков
+      ignoreUnescapedHTML: true
+    });
+  
+    // Применяем подсветку ко всем блокам кода
+    container.querySelectorAll('pre code:not(.hljs)').forEach(block => {
+      hljs.highlightElement(block);
+    });
+  }
+
 editableDiv.addEventListener('input', checkPlaceholder);
 editableDiv.addEventListener('blur', checkPlaceholder);
+
+
+/**
+ * Инициализирует подсветку синтаксиса с тёмной темой
+ * @param {string} [theme='github-dark'] - Название тёмной темы
+ */
+async function initDarkSyntaxHighlighting(theme = 'github-dark') {
+    // Проверяем, не подключен ли уже highlight.js
+    if (typeof hljs !== 'undefined') {
+      await applyDarkTheme(theme);
+      highlightAllCodeBlocks();
+      return;
+    }
+  
+    // Динамически подгружаем необходимые ресурсы
+    try {
+      await Promise.all([
+        loadCSS(`https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/${theme}.min.css`),
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js'),
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/autodetect.min.js')
+      ]);
+      
+      highlightAllCodeBlocks();
+    } catch (error) {
+      console.error('Error loading syntax highlighting:', error);
+    }
+  }
+  
+  /**
+   * Подсвечивает все блоки кода на странице
+   */
+  function highlightAllCodeBlocks() {
+    hljs.configure({
+      languages: [], // Автоопределение языков
+      ignoreUnescapedHTML: true
+    });
+  
+    document.querySelectorAll('pre code:not(.hljs)').forEach(block => {
+      hljs.highlightElement(block);
+    });
+  }
+  
+  /**
+   * Применяет тёмную тему (если уже есть hljs)
+   */
+  async function applyDarkTheme(theme) {
+    // Удаляем старые темы если есть
+    document.querySelectorAll('link[data-hljs-theme]').forEach(link => link.remove());
+    
+    await loadCSS(`https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/${theme}.min.css`, true);
+  }
+  
+  /**
+   * Загружает CSS файл
+   */
+  function loadCSS(href, isTheme = false) {
+    return new Promise((resolve, reject) => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      if (isTheme) link.setAttribute('data-hljs-theme', '');
+      link.onload = resolve;
+      link.onerror = reject;
+      document.head.appendChild(link);
+    });
+  }
+  
+  /**
+   * Загружает JS файл
+   */
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }

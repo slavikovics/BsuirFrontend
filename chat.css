@@ -62,7 +62,7 @@
     flex-shrink: 0;
     opacity: 0;
     border-radius: 10px;
-    max-width: 60%;
+    max-width: 80%;
     min-width: 100px;
     color: #ffffff;
     padding: 15px 20px;
@@ -83,4 +83,6 @@
     margin-left: 20px;
     margin-right: auto;
     padding-left: 10px;
+    word-wrap: break-word; /* Позволяет переносить длинные слова */
+    overflow-wrap: break-word; /* Для лучшей поддержки */
 }
