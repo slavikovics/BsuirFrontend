@@ -17,7 +17,7 @@ toggleOpen.addEventListener('click', () => {
 });
 
 async function sendMessageToOpenRouter(messageText) {
-    const endpointUrl = 'http://212.192.9.89:2346/Bsuir?modelId=3';
+    const endpointUrl = 'http://212.192.9.89:2346/Bsuir?modelId=0';
     
     try {
         const response = await fetch(endpointUrl, {
