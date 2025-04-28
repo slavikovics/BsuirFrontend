@@ -7,14 +7,14 @@ button:focus{
 }
 
 #toggleOpen{
-    padding: 10px 10px 5px 10px;
+    padding: 10px 10px 10px 10px;
     margin-left: 10px;
     margin-bottom: 8px;
     margin-right: 0px;
 }
 
 #toggleClose{
-    padding: 10px 10px 5px 10px;
+    padding: 10px 10px 10px 10px;
     position: absolute;
     bottom: 40px;
     right: 10px;
@@ -46,7 +46,7 @@ a {
 }
 
 #send-button{
-    padding: 10px 10px 5px 10px;
+    padding: 10px 10px 10px 10px;
     margin-right: 10px;
     margin-bottom: 8px;
 
@@ -62,4 +62,30 @@ a {
 .button:focus{
     outline: none;
     background-color: #42386e;
+}
+
+.ui{
+    border: none;
+    margin: 0 auto;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+}
+
+.logo-image{
+    height: 40%;
+    width: 40%;
+    margin: 0 auto;
+    border: none;
+}
+
+.nav-link{
+    all: unset;
+    text-decoration: none;
+}
+
+.nav-link:hover{
+    background-color: none;
+    box-shadow: none;
 }

@@ -19,12 +19,21 @@
 }
 
 .sidenav a {
+    all: unset;
     padding: 15px;
     text-decoration: none;
     font-size: 16px;
     color: white;
     display: block;
-    transition: 0.3s;
+}
+
+.sidenav a:hover{
+    all: unset;
+    padding: 15px;
+    text-decoration: none;
+    font-size: 16px;
+    color: white;
+    display: block;
 }
 
 .sidenav button{
@@ -38,6 +47,5 @@
     text-align: center;
     padding: 20px 0;
     font-size: 24px;
-    border-bottom: 1px solid #404040;
     margin-bottom: 20px;
 }
