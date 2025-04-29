@@ -86,3 +86,27 @@
     word-wrap: break-word; /* Позволяет переносить длинные слова */
     overflow-wrap: break-word; /* Для лучшей поддержки */
 }
+
+/* Анимация появления */
+.expand-animation {
+    animation: expand 0.3s ease-out forwards;
+    opacity: 0; /* Начальная прозрачность */
+  }
+  
+  @keyframes expand {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+
+/* Полностью отключает скролл (вертикальный и горизонтальный) */
+.no-scroll {
+    overflow: hidden !important;
+    touch-action: none !important; /* Блокировка скролла на тач-устройствах */
+}

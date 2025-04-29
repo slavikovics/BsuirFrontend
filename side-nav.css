@@ -36,11 +36,15 @@
     display: block;
 }
 
-.sidenav button{
+.sidenav-section-button{
     margin-top: 10px;
     margin-bottom: 10px;
     margin-left: 20px;
     margin-right: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    width: 75%;
+    height: fit-content;
 }
 
 .sidenav .logo {

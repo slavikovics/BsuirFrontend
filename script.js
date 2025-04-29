@@ -1,8 +1,16 @@
+import { animateSendButtonLoading } from './button-animation.js'
+import { sendButtonReturnToDefault } from './button-animation.js'
+import { animateHtmlExpansion } from './bot-message-animation.js';
+import {smoothScrollToBottom } from './bot-message-animation.js';
+
 const sidenav = document.getElementById('sidenav');
 const mainContent = document.getElementById('mainContent');
+const chatInputContainer = document.getElementById('chat-input-container');
 const toggleButton = document.getElementById('toggleButton');
 
-addBotMessageToChat('Здравствуйте! Я ассистент по университету. Как я могу помочь вам сегодня?');
+let canMessageBeSent = true;
+
+addBotMessageToChat('<p>Здравствуйте! Я ассистент по университету. Как я могу помочь вам сегодня?<p>');
 
 sidenav.classList.add('collapsed');
 
@@ -17,8 +25,8 @@ toggleOpen.addEventListener('click', () => {
 });
 
 async function sendMessageToOpenRouter(messageText) {
-    const endpointUrl = 'http://212.192.9.89:2346/Bsuir?modelId=0';
-    
+    const endpointUrl = 'https://api.bsuirbot.site/Bsuir?modelId=1';  
+
     try {
         const response = await fetch(endpointUrl, {
             method: 'POST',
@@ -52,16 +60,18 @@ function responseToMessage(messageText) {
             console.error('Error:', error);
             addBotMessageToChat('Извините, произошла ошибка: ' + 
                               (error.message || 'Попробуйте еще раз позже'));
+        }).finally(() => {
+            canMessageBeSent = true;
         });
 }
 
-function removeAnimations(chatContainer) {
+function removeAnimationsForPreviousBlocks(chatContainer) {
     const children = chatContainer.children;
     if (!children) return;
 
     for (let child of children) {
         child.style.animation = 'none';
-        child.style.backgroundColor.opacity = '0.9';
+        //child.style.backgroundColor.opacity = '0.9';
     }
 }
 
@@ -93,27 +103,13 @@ function AnimateExpansion(messageElement, message, chatContainer, borderAnimatio
         }
     }, 10);
 
-            const startTime = performance.now();
-            const duration = 800;
-            const scrollDiff = chatContainer.scrollHeight - defaultScrollHeight;
-
-            function scrollStep(timestamp) {
-                const elapsed = timestamp - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                chatContainer.scrollTop = chatContainer.scrollHeight + scrollDiff * progress;
-
-                if (progress < 1) {
-                    requestAnimationFrame(scrollStep);
-                }
-            }
-
-            requestAnimationFrame(scrollStep);
     }, 100);
 }
 
 function addUserMessageToChat(message) {
+    canMessageBeSent = false;
     const chatContainer = document.getElementById('chat-container');
-    removeAnimations(chatContainer)
+    removeAnimationsForPreviousBlocks(chatContainer);
 
     const messageElement = document.createElement('div');
 
@@ -122,46 +118,57 @@ function addUserMessageToChat(message) {
 
     chatContainer.appendChild(messageElement);
 
-    AnimateExpansion(messageElement, message, chatContainer, "glowingBorder");
+    //AnimateExpansion(messageElement, message, chatContainer, "glowingBorder");
+    messageElement.style.animation = 'glowingBorder' + ' 4s ease-in-out infinite';
+    animateHtmlExpansion(messageElement, renderMarkdown(message), chatContainer, "expand-animation");
 }
 
 function addBotMessageToChat(message){
     const chatContainer = document.getElementById('chat-container');
-    removeAnimations(chatContainer)
+    removeAnimationsForPreviousBlocks(chatContainer);
+    sendButtonReturnToDefault();
 
     const messageElement = document.createElement('div');
 
     messageElement.classList.add('markdown-content');
-    messageElement.innerHTML = renderMarkdown(message);
+    //messageElement.innerHTML = renderMarkdown(message);
 
-    initDarkSyntaxHighlighting();
     messageElement.className = 'message bot';
 
     messageElement.style.backgroundColor = '#131926';
     chatContainer.appendChild(messageElement);
+    messageElement.style.animation = 'glowingBorderBlue' + ' 4s ease-in-out infinite';
 
-    AnimateExpansion(messageElement, '', chatContainer, "glowingBorderBlue");
+    animateHtmlExpansion(messageElement, renderMarkdown(message), chatContainer, "expand-animation");
+    initDarkSyntaxHighlighting();
+    //AnimateExpansion(messageElement, '', chatContainer, "glowingBorderBlue");
 }
 
 document.getElementById('send-button').addEventListener('click', function() {
+    if (!canMessageBeSent) return;
+
     const userInput = document.getElementById('user-input');
     const message = userInput.innerText.trim();
     
     if (message) {
         addUserMessageToChat(message);
         clearInput(userInput);
-        responseToMessage(message)
+        animateSendButtonLoading();
+        responseToMessage(message);
     }
 });
 
 document.getElementById('user-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         const message = this.innerText.trim();
-        clearInput(this);
+        
+        if (!message) clearInput(this);
 
-        if (message) {
+        if (message && canMessageBeSent) {
+            clearInput(this);
             addUserMessageToChat(message);
-            responseToMessage(message)
+            animateSendButtonLoading();
+            responseToMessage(message);
         }
     }
 });
@@ -219,40 +226,6 @@ function renderMarkdown(content, forcePlainText = false) {
         return escapedContent.replace(/\n/g, '<br>');
     }
 }
-
-/**
- * Наверное не нужно (но надо проверить)
- * Включает подсветку синтаксиса для блоков кода
- * @param {Element|string} [target] - Элемент DOM или селектор (опционально)
- */
-function highlightCode(target = document) {
-    // Проверяем доступность hljs
-    if (typeof hljs === 'undefined') {
-      console.warn('Highlight.js not loaded! Skipping syntax highlighting.');
-      return;
-    }
-  
-    // Получаем целевой элемент
-    const container = typeof target === 'string' 
-      ? document.querySelector(target) 
-      : target;
-  
-    if (!container) {
-      console.warn('Target element not found:', target);
-      return;
-    }
-  
-    // Настройки для автоопределения языков
-    hljs.configure({
-      languages: [], // Автодетект всех языков
-      ignoreUnescapedHTML: true
-    });
-  
-    // Применяем подсветку ко всем блокам кода
-    container.querySelectorAll('pre code:not(.hljs)').forEach(block => {
-      hljs.highlightElement(block);
-    });
-  }
 
 editableDiv.addEventListener('input', checkPlaceholder);
 editableDiv.addEventListener('blur', checkPlaceholder);
