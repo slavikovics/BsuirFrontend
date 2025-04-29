@@ -1,16 +1,24 @@
 import { animateSendButtonLoading } from './button-animation.js'
 import { sendButtonReturnToDefault } from './button-animation.js'
 import { animateHtmlExpansion } from './bot-message-animation.js';
-import {smoothScrollToBottom } from './bot-message-animation.js';
+import { buildFillerContent } from './bot-message-animation.js';
+import { fastScrollToBottom } from './bot-message-animation.js';
+import { loadChatHistory, saveMessage, clearChatHistory, setGreetingTime } from './chat-history.js';
 
 const sidenav = document.getElementById('sidenav');
-const mainContent = document.getElementById('mainContent');
+const chatContainer = document.getElementById('chat-container');
 const chatInputContainer = document.getElementById('chat-input-container');
 const toggleButton = document.getElementById('toggleButton');
 
 let canMessageBeSent = true;
+let context = Array();
 
-addBotMessageToChat('<p>Здравствуйте! Я ассистент по университету. Как я могу помочь вам сегодня?<p>');
+renderChatHistory();
+fastScrollToBottom(chatContainer);
+await tryLoadAndHighlight();
+
+if (setGreetingTime()) addBotMessageToChat('<p>Здравствуйте! Я ассистент по университету. Как я могу помочь вам сегодня?<p>', true, false);
+tryLoadAndHighlight();
 
 sidenav.classList.add('collapsed');
 
@@ -25,7 +33,7 @@ toggleOpen.addEventListener('click', () => {
 });
 
 async function sendMessageToOpenRouter(messageText) {
-    const endpointUrl = 'https://api.bsuirbot.site/Bsuir?modelId=1';  
+    const endpointUrl = 'https://api.bsuirbot.site/Bsuir?modelId=0';  
 
     try {
         const response = await fetch(endpointUrl, {
@@ -33,7 +41,7 @@ async function sendMessageToOpenRouter(messageText) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(messageText),
+            body: JSON.stringify("ЗАПРОС ОТ ПОЛЬЗОВАТЕЛЯ НА КОТОРЫЙ ТЫ ДОЛЖЕН ОТВЕТИТЬ: " + messageText + "; СТАРЫЕ СООБЩЕНИЯ ОТ ПОЛЬЗОВАТЕЛЯ (МОЖНО И ИГНОРИРОВАТЬ): " + context.toString()),
         });
 
         if (!response.ok) {
@@ -49,7 +57,36 @@ async function sendMessageToOpenRouter(messageText) {
     }
 }
 
+function renderChatHistory() {
+    const messages = loadChatHistory();
+    console.log(messages);
+    if (!messages || messages.length === 0) return;
+
+    for (let i = 0; i < messages.length; i++) {
+        if (!messages[i] || messages[i] === '') continue;
+
+        if (i % 2 === 0) {
+            // Четные индексы - пользователь
+            addUserMessageToChat(messages[i].text, false);
+        } else {
+            // Нечетные индексы - бот
+            addBotMessageToChat(messages[i].text, false);
+        }
+    }
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (i % 2 === 0) {
+            if (context.length >= 5) return;
+            context.push(messages[i].text);
+        }
+    }
+
+    console.log("Context:" + context);
+}
+
 function responseToMessage(messageText) {
+    addFillerToChat(buildFillerContent());
+
     sendMessageToOpenRouter(messageText)
         .then(response => {
             const botResponse = response?.choices?.[0]?.message?.content || 
@@ -106,8 +143,8 @@ function AnimateExpansion(messageElement, message, chatContainer, borderAnimatio
     }, 100);
 }
 
-function addUserMessageToChat(message) {
-    canMessageBeSent = false;
+function addUserMessageToChat(message, afterLoad = true) {
+    if (afterLoad) canMessageBeSent = false;
     const chatContainer = document.getElementById('chat-container');
     removeAnimationsForPreviousBlocks(chatContainer);
 
@@ -119,11 +156,42 @@ function addUserMessageToChat(message) {
     chatContainer.appendChild(messageElement);
 
     //AnimateExpansion(messageElement, message, chatContainer, "glowingBorder");
-    messageElement.style.animation = 'glowingBorder' + ' 4s ease-in-out infinite';
-    animateHtmlExpansion(messageElement, renderMarkdown(message), chatContainer, "expand-animation");
+    if (afterLoad){
+        messageElement.style.animation = 'glowingBorder' + ' 4s ease-in-out infinite';
+        animateHtmlExpansion(messageElement, renderMarkdown(message), chatContainer, "expand-animation");
+        saveMessage(message);
+
+        context.push(message);
+        if(context.length > 5) context.shift();
+    }
+    else {
+        messageElement.innerHTML = message;
+        messageElement.style.opacity = '1';
+    }
 }
 
-function addBotMessageToChat(message){
+function addFillerToChat(innerHTML){
+    const chatContainer = document.getElementById('chat-container');
+    const messageElement = document.createElement('div');
+    messageElement.id = 'filler';
+    messageElement.className = 'message bot';
+
+    messageElement.style.backgroundColor = '#131926';
+    chatContainer.appendChild(messageElement);
+    messageElement.style.animation = 'glowingBorderBlue' + ' 4s ease-in-out infinite';
+
+    animateHtmlExpansion(messageElement, innerHTML, chatContainer, "expand-animation");
+    //messageElement.innerHTML = innerHTML;
+    //document.getElementById('filler').classList.remove('hidden');
+}
+
+function addBotMessageToChat(message, afterLoad = true, shouldSave = true){
+    const filler = document.getElementById('filler');
+    
+    if (filler){
+        filler.remove();
+    }
+
     const chatContainer = document.getElementById('chat-container');
     removeAnimationsForPreviousBlocks(chatContainer);
     sendButtonReturnToDefault();
@@ -132,17 +200,27 @@ function addBotMessageToChat(message){
 
     messageElement.classList.add('markdown-content');
     //messageElement.innerHTML = renderMarkdown(message);
-
     messageElement.className = 'message bot';
-
     messageElement.style.backgroundColor = '#131926';
     chatContainer.appendChild(messageElement);
-    messageElement.style.animation = 'glowingBorderBlue' + ' 4s ease-in-out infinite';
 
-    animateHtmlExpansion(messageElement, renderMarkdown(message), chatContainer, "expand-animation");
-    initDarkSyntaxHighlighting();
+    if (afterLoad){
+        messageElement.style.animation = 'glowingBorderBlue' + ' 4s ease-in-out infinite';
+        animateHtmlExpansion(messageElement, renderMarkdown(message), chatContainer, "expand-animation");
+        if (shouldSave) saveMessage(message);
+
+        //tryLoadAndHighlight();
+        highlightAllCodeBlocks();
+    }
+    else {
+        messageElement.innerHTML = renderMarkdown(message);
+        messageElement.style.opacity = '1';
+    }
+
     //AnimateExpansion(messageElement, '', chatContainer, "glowingBorderBlue");
 }
+
+document.getElementById('clear-history').addEventListener('click', clearChatHistory);
 
 document.getElementById('send-button').addEventListener('click', function() {
     if (!canMessageBeSent) return;
@@ -230,61 +308,40 @@ function renderMarkdown(content, forcePlainText = false) {
 editableDiv.addEventListener('input', checkPlaceholder);
 editableDiv.addEventListener('blur', checkPlaceholder);
 
-
-/**
- * Инициализирует подсветку синтаксиса с тёмной темой
- * @param {string} [theme='github-dark'] - Название тёмной темы
- */
-async function initDarkSyntaxHighlighting(theme = 'github-dark') {
-    // Проверяем, не подключен ли уже highlight.js
+async function tryLoadAndHighlight(theme = 'github-dark') {
     if (typeof hljs !== 'undefined') {
       await applyDarkTheme(theme);
       highlightAllCodeBlocks();
       return;
     }
   
-    // Динамически подгружаем необходимые ресурсы
     try {
       await Promise.all([
         loadCSS(`https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/${theme}.min.css`),
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js'),
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/autodetect.min.js')
+        //loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/autodetect.min.js') // does not work and probably is not needed
       ]);
-      
-      highlightAllCodeBlocks();
     } catch (error) {
       console.error('Error loading syntax highlighting:', error);
     }
-  }
+}
   
-  /**
-   * Подсвечивает все блоки кода на странице
-   */
-  function highlightAllCodeBlocks() {
+function highlightAllCodeBlocks() {
     hljs.configure({
-      languages: [], // Автоопределение языков
       ignoreUnescapedHTML: true
     });
   
     document.querySelectorAll('pre code:not(.hljs)').forEach(block => {
       hljs.highlightElement(block);
     });
-  }
+}
   
-  /**
-   * Применяет тёмную тему (если уже есть hljs)
-   */
-  async function applyDarkTheme(theme) {
-    // Удаляем старые темы если есть
+async function applyDarkTheme(theme) {
     document.querySelectorAll('link[data-hljs-theme]').forEach(link => link.remove());
-    
     await loadCSS(`https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/${theme}.min.css`, true);
-  }
+}
   
-  /**
-   * Загружает CSS файл
-   */
-  function loadCSS(href, isTheme = false) {
+function loadCSS(href, isTheme = false) {
     return new Promise((resolve, reject) => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -294,12 +351,9 @@ async function initDarkSyntaxHighlighting(theme = 'github-dark') {
       link.onerror = reject;
       document.head.appendChild(link);
     });
-  }
-  
-  /**
-   * Загружает JS файл
-   */
-  function loadScript(src) {
+}
+
+function loadScript(src) {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = src;
@@ -307,4 +361,4 @@ async function initDarkSyntaxHighlighting(theme = 'github-dark') {
       script.onerror = reject;
       document.head.appendChild(script);
     });
-  }
+}
