@@ -20,15 +20,14 @@ export function clearChatHistory() {
     location.reload(true);
 }
 
-export function setGreetingTime() {
-    const now = new Date().getTime(); // Текущее время в мс
+export function shouldGreetUser() {
+    if (loadChatHistory().length == 0) return true;
+
+    const now = new Date().getTime();
     const lastGreetingTime = parseInt(localStorage.getItem('greetingTime') || 0);
-    const tenMinutesInMs = 10 * 60 * 1000; // 10 минут в миллисекундах
+    const tenMinutesInMs = 10 * 60 * 1000;
     
-    // Проверяем, прошло ли более 10 минут
     const shouldShowGreeting = (now - lastGreetingTime) > tenMinutesInMs;
-    
-    // Обновляем время в любом случае
     localStorage.setItem('greetingTime', now.toString());
     
     return shouldShowGreeting;
