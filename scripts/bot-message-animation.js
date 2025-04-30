@@ -1,8 +1,7 @@
-import { highlightAllCodeBlocks, tryLoadAndHighlight } from "./markdown.js";
+import { highlightAllCodeBlocks } from "./markdown.js";
 
 export function animateHtmlExpansion(messageElement, innerHTML, chatContainer, animationName, smooth = true) {
 	disableScroll();
-	let elapsedTime = 0;
 	
 	messageElement.innerHTML = '';
 	messageElement.style.display = 'block';
@@ -26,6 +25,7 @@ export function animateHtmlExpansion(messageElement, innerHTML, chatContainer, a
 	const addNextElement = () => {
 		if (index >= elements.length) {
 			highlightAllCodeBlocks();
+			enableScroll();
 			return;
 		} 
 
@@ -44,14 +44,12 @@ export function animateHtmlExpansion(messageElement, innerHTML, chatContainer, a
 		index++;
 		if (smooth) smoothScrollToBottom(chatContainer);
 		else fastScrollToBottom(container);
-		setTimeout(addNextElement, 90); 
-		elapsedTime += 90;
+		setTimeout(addNextElement, 200); 
 	};
 
 	addNextElement();
 	if (smooth) smoothScrollToBottom(chatContainer);
 	else fastScrollToBottom(chatContainer);
-	enableScroll();
 }
 
 export function buildFillerContent(){

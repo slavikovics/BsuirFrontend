@@ -1,13 +1,24 @@
 export async function sendMessageToOpenRouter(messageText, chatHistory) {
-    const endpointUrl = 'https://api.bsuirbot.site/Bsuir?modelId=1';  
+    const endpointUrl = 'https://api.bsuirbot.site/Bsuir?modelId=0';  
 
     try {
+        let bodyMessages = [];
+        //chatHistory.forEach(element => {
+            //bodyMessages.push({'role': 'user', 'content': element});
+        //});
+        //bodyMessages.reverse();
+
+        bodyMessages.push({'role': 'user', 'content': messageText});
+        let requestText = JSON.stringify(bodyMessages);
+        console.log(requestText);
+        console.log("Request text: " + requestText);
+
         const response = await fetch(endpointUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify("ЗАПРОС ОТ ПОЛЬЗОВАТЕЛЯ НА КОТОРЫЙ ТЫ ДОЛЖЕН ОТВЕТИТЬ: " + messageText + "; СТАРЫЕ СООБЩЕНИЯ ОТ ПОЛЬЗОВАТЕЛЯ (МОЖНО И ИГНОРИРОВАТЬ): " + chatHistory.toString()),
+            body: requestText
         });
 
         if (!response.ok) {

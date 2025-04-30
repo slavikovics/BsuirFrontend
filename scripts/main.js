@@ -6,7 +6,7 @@ import { fastScrollToBottom } from './bot-message-animation.js';
 import { loadChatHistory, saveMessage, clearChatHistory, shouldGreetUser } from './chat-history.js';
 import { sendMessageToOpenRouter } from './open-router.js';
 import { removeAnimationsForPreviousBlocks, checkPlaceholder, clearInput } from './chat-animations.js';
-import { renderMarkdown, tryLoadAndHighlight, highlightAllCodeBlocks } from './markdown.js';
+import { renderMarkdown, tryLoadAndHighlight } from './markdown.js';
 
 const sidenav = document.getElementById('sidenav');
 const chatContainer = document.getElementById('chat-container');
@@ -14,11 +14,11 @@ const chatContainer = document.getElementById('chat-container');
 let canMessageBeSent = true;
 let context = Array();
 
+collapseSidenav();
 renderChatHistory();
 fastScrollToBottom(chatContainer);
 await tryLoadAndHighlight();
 greet();
-collapseSidenav();
 configureToggleClose();
 configureToggleOpen();
 configureChatHistoryDeletion();
@@ -159,11 +159,6 @@ function addBotMessageToChat(message, afterLoad = true, shouldSave = true) {
         messageElement.innerHTML = renderMarkdown(message);
         messageElement.style.opacity = '1';
     }
-
-    if (afterLoad) {
-        //highlightAllCodeBlocks();
-        //console.log("Tried to highlight all code blocks.");
-    } 
 }
 
 function configureChatHistoryDeletion() {

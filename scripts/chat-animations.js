@@ -16,7 +16,7 @@ export function checkPlaceholder(div) {
     }
 }
 
-export function clearInput(userInput){
+export function clearInput(userInput) {
     setTimeout(() => {
         userInput.innerHTML = '';
     }, 5);

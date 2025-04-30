@@ -1,4 +1,4 @@
-export function animateSendButtonLoading(){
+export function animateSendButtonLoading() {
     const image = document.getElementById('send-button-image');
     const btn = document.getElementById('send-button');
 
@@ -9,7 +9,7 @@ export function animateSendButtonLoading(){
     spinner.classList.remove('hidden');
 }
 
-export function sendButtonReturnToDefault(){
+export function sendButtonReturnToDefault() {
     var btn = document.getElementById('send-button');
 
     const spinner = btn.querySelector('.btn-spinner');

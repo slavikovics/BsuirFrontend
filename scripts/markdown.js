@@ -39,8 +39,7 @@ export async function tryLoadAndHighlight(theme = 'github-dark') {
     try {
       await Promise.all([
         loadCSS(`https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/${theme}.min.css`),
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js'),
-        //loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/autodetect.min.js') // does not work and probably is not needed
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js')
       ]);
     } catch (error) {
       console.error('Error loading syntax highlighting:', error);

@@ -10,7 +10,7 @@ export function saveMessage(message) {
     localStorage.setItem('chatMessages', JSON.stringify(messages));
 }
 
-export function loadChatHistory(){
+export function loadChatHistory() {
     const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
     return messages;
 }
