@@ -154,13 +154,16 @@ function addBotMessageToChat(message, afterLoad = true, shouldSave = true) {
         messageElement.style.animation = 'glowingBorderBlue' + ' 4s ease-in-out infinite';
         animateHtmlExpansion(messageElement, renderMarkdown(message), chatContainer, "expand-animation");
         if (shouldSave) saveMessage(message);
-
-        highlightAllCodeBlocks();
     }
     else {
         messageElement.innerHTML = renderMarkdown(message);
         messageElement.style.opacity = '1';
     }
+
+    if (afterLoad) {
+        //highlightAllCodeBlocks();
+        //console.log("Tried to highlight all code blocks.");
+    } 
 }
 
 function configureChatHistoryDeletion() {
