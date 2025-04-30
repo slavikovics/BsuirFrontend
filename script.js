@@ -52,7 +52,7 @@ function configureToggleOpen(){
 
 function renderChatHistory() {
     const messages = loadChatHistory();
-    console.log("Chat history: " + messages);
+    console.log(messages);
     if (!messages || messages.length === 0) return;
 
     for (let i = 0; i < messages.length; i++) {
