@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  frontend: 
+    image: python:3.9
+    command: python -m http.server 3030 --bind 0.0.0.0
+    ports:
+      - "3030:3030"
+    volumes:
+      - .:/app  
+    working_dir: /app
+    
