@@ -46,23 +46,14 @@ async function sendDirectlyToOpenRouter(messageText) {
     }
 }
 
-// this will send requests to answer_pipline WOULD NOT WORK FOR NOW
 async function useRagAnswerPipeline(messageText) {
     try {
-        let body = [];
-
-        // here change body for your endpoint if does not work
-        body.push({'message': messageText, 'chat_engine': config.CHAT_ENGINE_FOR_RAG});
-        let requestText = JSON.stringify(body);
-
-        console.log("Request text: " + requestText);
-
-        const response = await fetch(endpointUrl, {
+        const response = await fetch(config.ANSWER_PIPELINE_API, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'text/plain'
             },
-            body: requestText
+            body: messageText
         });
 
         if (!response.ok) {
@@ -71,14 +62,34 @@ async function useRagAnswerPipeline(messageText) {
             throw new Error(`HTTP error! status: ${response.status}. Message: ${errorMessage}`);
         }
 
-        return await convertResponceToInnerFormat(response.json());
+        const data = await response.json();
+        return convertResponseToMarkdownFormat(data);
     } catch (error) {
         console.error('Endpoint Error:', error);
         throw error;
     }
 }
 
-// this will convert request result to the one simillar to openRouter's (with choices ...)
-async function convertResponceToInnerFormat(responce) {
-    return await responce['responce'];
+function convertResponseToMarkdownFormat(responseData) {
+    const text = responseData.response || "Ответ пуст";
+    const sources = responseData.source_urls || [];
+
+    let markdownSources = "";
+    if (sources.length > 0) {
+        markdownSources += "\n\n### Источники:\n";
+        sources.forEach((url, index) => {
+            markdownSources += `- [Источник ${index + 1}](${url})\n`;
+        });
+    }
+
+    return {
+        choices: [
+            {
+                message: {
+                    role: "assistant",
+                    content: text + markdownSources
+                }
+            }
+        ]
+    };
 }
