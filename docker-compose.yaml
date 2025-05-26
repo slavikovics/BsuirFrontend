@@ -9,4 +9,13 @@ services:
     volumes:
       - .:/app  
     working_dir: /app
+
+  cors-proxy:
+    image: ghcr.io/rob--w/cors-anywhere
+    container_name: cors-anywhere
+    environment:
+      - CORSANYWHERE_ALLOW_ORIGIN=*
+      - CORSANYWHERE_DISABLE_HEADERS=origin,x-forwarded-for
+    ports:
+      - "8081:8080"
     
