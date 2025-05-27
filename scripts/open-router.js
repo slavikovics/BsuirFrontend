@@ -21,7 +21,7 @@ async function sendDirectlyToOpenRouter(messageText) {
         //bodyMessages.reverse();
 
         bodyMessages.push({'role': 'user', 'content': messageText});
-        let requestText = JSON.stringify(bodyMessages);
+        let requestText = JSON.stringify(bodyMessages);at
         console.log(requestText);
         console.log("Request text: " + requestText);
 
@@ -51,9 +51,9 @@ async function useRagAnswerPipeline(messageText) {
         const response = await fetch(config.CORS_URL + config.ANSWER_PIPELINE_API, {
             method: 'POST',
             headers: {
-                'Content-Type': 'text/plain'
+                'Content-Type': 'application/json'
             },
-            body: messageText
+            body: '\"' + messageText + '\"'
         });
 
         if (!response.ok) {
