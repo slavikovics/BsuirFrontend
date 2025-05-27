@@ -48,21 +48,24 @@ async function sendDirectlyToOpenRouter(messageText) {
 
 async function useRagAnswerPipeline(messageText) {
     try {
-        const response = await fetch(config.CORS_URL + config.ANSWER_PIPELINE_API, {
+        const fullUrl = config.CORS_URL + config.ANSWER_PIPELINE_API;
+
+        const response = await fetch(fullUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: '\"' + messageText + '\"'
+            body: JSON.stringify(messageText)
         });
 
+        const rawText = await response.text();
+
         if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            const errorMessage = errorData?.error?.message || await response.text();
-            throw new Error(`HTTP error! status: ${response.status}. Message: ${errorMessage}`);
+            throw new Error(`HTTP error! status: ${response.status}. Message: ${rawText}`);
         }
 
-        const data = await response.json();
+        const data = await JSON.parse(rawText);
+        
         return convertResponseToMarkdownFormat(data);
     } catch (error) {
         console.error('Endpoint Error:', error);
