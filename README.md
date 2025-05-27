@@ -2,7 +2,7 @@
 
 ## Set up tips:
 
-### 0. Bsuir-assystant must be installed first: 
+### 0. Bsuir-assistant must be installed first: [github](https://github.com/semantic-hallucinations/bsuir-assistant)
 
 ### 1. Configure a network in docker. Here is an example for ``"shared-network"``:
 
