@@ -4,6 +4,12 @@ services:
     ports:
       - "3030:80"
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - ./:/usr/share/nginx/html:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true
     
