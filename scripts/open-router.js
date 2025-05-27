@@ -78,8 +78,8 @@ function convertResponseToMarkdownFormat(responseData) {
     let markdownSources = "";
     if (sources.length > 0) {
         markdownSources += "\n\n### Источники:\n";
-        sources.forEach((url, index) => {
-            markdownSources += `- [Источник ${index + 1}](${url})\n`;
+        sources.forEach((url) => {
+            markdownSources += `- [Источник ${url}](${url})\n`;
         });
     }
 
