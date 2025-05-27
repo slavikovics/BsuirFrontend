@@ -48,9 +48,7 @@ async function sendDirectlyToOpenRouter(messageText) {
 
 async function useRagAnswerPipeline(messageText) {
     try {
-        const fullUrl = config.CORS_URL + config.ANSWER_PIPELINE_API;
-
-        const response = await fetch(fullUrl, {
+        const response = await fetch(config.ANSWER_PIPELINE_API, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
