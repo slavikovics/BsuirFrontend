@@ -75,3 +75,8 @@ server {
 ```
 
 ### 4. Launch answer-pipline container first, then frontend.
+```
+docker compose up
+```
+
+### 5. Now you can open frontend by going to ``http://localhost:3030/``
