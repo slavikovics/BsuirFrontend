@@ -25,7 +25,7 @@ services:
       - ./qdrant_data:/qdrant/storage
     environment:
       - QDRANT_ALLOW_CORS=true
-    networks:pipline
+    networks:
       - shared-network
     restart: unless-stopped
     
