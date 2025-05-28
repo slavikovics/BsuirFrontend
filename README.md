@@ -87,7 +87,7 @@ docker compose up
 Use ``docker compose stop`` and ``docker compose start`` for the bsuir-assistant when possible to avoid downloading model (approx. 1.6 GB of traffic needed).
 
 #### 2. Qdrant fails to launch properly
-This may happen when Qdrant has no rights to modify files it's folder (can work fine during first launch and cause an error on a second and beyond)
+This may happen when Qdrant has no rights to modify files in it's folder (can work fine during first launch and cause an error on a second and beyond)
 
 To solve this problem add permissions for ``qdrant_data`` folder
 
