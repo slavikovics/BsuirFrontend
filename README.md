@@ -81,4 +81,27 @@ docker compose up
 
 ### 5. Now you can open frontend by going to ``http://localhost:3030/``
 
-### 6. Use ``docker compose stop`` and ``docker compose start`` for the bsuir-assitstant when possible to avoid downloading model (approx. 1.6 GB of traffic)
+### 6. Potential problems and fixes:
+
+#### 1. Long startup time due to model being downloaded with every launch
+Use ``docker compose stop`` and ``docker compose start`` for the bsuir-assistant when possible to avoid downloading model (approx. 1.6 GB of traffic needed).
+
+#### 2. Qdrant fails to launch properly
+This may happen when Qdrant has no rights to modify files it's folder (can work fine during first launch and cause an error on a second and beyond)
+
+To solve this problem add permissions for ``qdrant_data`` folder
+
+```bash
+mkdir -p qdrant_data && chmod -R 777 qdrant_data
+```
+
+#### 3. Qdrant WSL WAL Error
+
+Errors like "Panic occured in file ... Wal error ... :Zone.Identifier\"" }" are caused by moving qdrant_data from windows file system to WSL's file system. They are happening because Windows adds zone files (Zone.Identifier) to store metadata for content downloaded from the Internet.
+
+To fix this error go to ``qdrant_data`` folder and use this command to delete all zone files:
+
+```bash
+find . -name "*Zone.Identifier" -exec rm -f {} \;
+```
+
