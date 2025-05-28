@@ -97,7 +97,7 @@ mkdir -p qdrant_data && chmod -R 777 qdrant_data
 
 #### 3. Qdrant WSL WAL Error
 
-Errors like "Panic occured in file ... Wal error ... :Zone.Identifier\"" }" are caused by moving qdrant_data from windows file system to WSL's file system. They are happening because Windows adds zone files (Zone.Identifier) to store metadata for content downloaded from the Internet.
+Errors like ``Panic occured in file ... Wal error ... :Zone.Identifier\"" }`` are caused by moving qdrant_data from windows file system to WSL's file system. They are happening because Windows adds zone files (Zone.Identifier) to store metadata for content downloaded from the Internet.
 
 To fix this error go to ``qdrant_data`` folder and use this command to delete all zone files:
 
