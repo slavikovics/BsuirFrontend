@@ -80,3 +80,5 @@ docker compose up
 ```
 
 ### 5. Now you can open frontend by going to ``http://localhost:3030/``
+
+### 6. Use ``docker compose stop`` and ``docker compose start`` for the bsuir-assitstant when possible to avoid downloading model (approx. 1.6 GB of traffic)
