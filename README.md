@@ -12,7 +12,7 @@ docker network create shared-network
 
 ### 2. Add network configuration to docker-compose.yaml where answer-pipeline is.
 
-(something like this)
+(something like this BUT ADJUST EXISTING docker-compose.yaml)
 ```bash
 services:
   qdrant:
