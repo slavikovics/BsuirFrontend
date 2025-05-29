@@ -5,6 +5,8 @@ HTTP_CONF="/etc/nginx/conf.d/http.conf"
 SSL_CONF="/etc/nginx/conf.d/default.conf"
 ACTIVE_CONF="/etc/nginx/conf.d/active.conf"
 
+set -e
+
 start_nginx_with_config() {
   echo "Starting nginx with config: $1"
   cp "$1" "$ACTIVE_CONF"
@@ -13,7 +15,7 @@ start_nginx_with_config() {
 
 stop_nginx() {
   echo "Stopping nginx..."
-  nginx -s stop
+  nginx -s quit
   sleep 2
 }
 
