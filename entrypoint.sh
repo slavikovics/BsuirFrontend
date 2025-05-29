@@ -49,4 +49,4 @@ fi
 
 # Запускаем основной HTTPS сервер
 echo "Starting HTTPS server with existing certificates"
-start_nginx "$SSL_CONF"
+start_nginx_final "$SSL_CONF"
