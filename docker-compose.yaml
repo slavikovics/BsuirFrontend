@@ -1,15 +1,33 @@
 services:
   frontend:
     image: nginx:alpine
-    ports:
-      - "3030:80"
+    container_name: frontend
     volumes:
-      - ./:/usr/share/nginx/html:ro
+      - ./frontend:/usr/share/nginx/html:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - answer-pipeline
     networks:
       - shared-network
+    ports:
+      - "80:80"
+      - "443:443"
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: >
+      sh -c "certbot certonly --webroot --webroot-path=/var/www/certbot
+      --email slavikovics@outlook.com --agree-tos --no-eff-email
+      -d bsuirbot.site -d www.bsuirbot.site"
 
 networks:
   shared-network:
     external: true
+
     
