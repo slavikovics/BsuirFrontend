@@ -6,7 +6,7 @@ services:
       - ./frontend:/usr/share/nginx/html:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certbot/conf:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/www:/var/www/certbot
     networks:
       - shared-network
     ports:
