@@ -1,47 +1,40 @@
 #!/bin/sh
 
-CERT_PATH="/etc/letsencrypt/live/bsuirbot.site/fullchain.pem"
+CERT_DIR="/etc/letsencrypt/live/bsuirbot.site"
 HTTP_CONF="/etc/nginx/conf.d/http.conf"
 SSL_CONF="/etc/nginx/conf.d/default.conf"
 ACTIVE_CONF="/etc/nginx/conf.d/active.conf"
 
-set -e
-
-start_nginx_with_config() {
+# Функция для запуска nginx с указанным конфигом
+start_nginx() {
   echo "Starting nginx with config: $1"
   cp "$1" "$ACTIVE_CONF"
-  nginx
+  nginx -g "daemon off;"
 }
 
-stop_nginx() {
-  echo "Stopping nginx..."
-  nginx -s quit
-  sleep 2
-}
-
-# If no certs, start with HTTP only
-if [ ! -f "$CERT_PATH" ]; then
-  echo "Certificates not found. Launching nginx for HTTP validation..."
-  start_nginx_with_config "$HTTP_CONF"
-
-  echo "Obtaining SSL certificates from Let's Encrypt..."
+# Проверяем наличие сертификатов
+if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
+  echo "SSL certificates not found. Starting HTTP server for certificate issuance..."
+  
+  # Запускаем временный HTTP сервер
+  start_nginx "$HTTP_CONF"
+  
+  # Получаем сертификаты
   certbot certonly --webroot -w /var/www/certbot \
     --email slavikovics@outlook.com --agree-tos --no-eff-email \
-    -d bsuirbot.site -d www.bsuirbot.site
-
+    -d bsuirbot.site -d www.bsuirbot.site --noninteractive
+  
+  # Проверяем успешность получения
   if [ $? -ne 0 ]; then
-    echo "Failed to obtain certificates."
-    stop_nginx
+    echo "Failed to obtain SSL certificates"
     exit 1
   fi
-
-  stop_nginx
+  
+  # Останавливаем временный сервер
+  nginx -s quit
+  sleep 2
 fi
 
-# Use SSL config now
-start_nginx_with_config "$SSL_CONF"
-
-# Keep container running
-tail -f /dev/null
-
-
+# Запускаем основной HTTPS сервер
+echo "Starting HTTPS server with existing certificates"
+start_nginx "$SSL_CONF"

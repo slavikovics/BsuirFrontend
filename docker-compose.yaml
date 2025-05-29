@@ -4,6 +4,8 @@ services:
     container_name: frontend
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx/http.conf:/etc/nginx/conf.d/http.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     ports:
@@ -11,6 +13,7 @@ services:
       - "443:443"
     networks:
       - shared-network
+    restart: unless-stopped
 
 networks:
   shared-network:
