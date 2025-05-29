@@ -6,10 +6,22 @@ SSL_CONF="/etc/nginx/conf.d/default.conf"
 ACTIVE_CONF="/etc/nginx/conf.d/active.conf"
 
 # Функция для запуска nginx с указанным конфигом
-start_nginx() {
+start_nginx_temp() {
   echo "Starting nginx with config: $1"
   cp "$1" "$ACTIVE_CONF"
-  nginx -g "daemon off;"
+  nginx
+}
+
+start_nginx_final() {
+  echo "Starting nginx with config: $1"
+  cp "$1" "$ACTIVE_CONF"
+  exec nginx -g "daemon off;"  # FINALLY, блокирующий запуск
+}
+
+stop_nginx() {
+  echo "Stopping nginx..."
+  nginx -s quit
+  sleep 2
 }
 
 # Проверяем наличие сертификатов
@@ -17,9 +29,10 @@ if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
   echo "SSL certificates not found. Starting HTTP server for certificate issuance..."
   
   # Запускаем временный HTTP сервер
-  start_nginx "$HTTP_CONF"
+  start_nginx_temp "$HTTP_CONF"
   
   # Получаем сертификаты
+  echo "Requesting SSL certificates from Let's Encrypt..."
   certbot certonly --webroot -w /var/www/certbot \
     --email slavikovics@outlook.com --agree-tos --no-eff-email \
     -d bsuirbot.site -d www.bsuirbot.site --noninteractive
@@ -30,9 +43,8 @@ if [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
     exit 1
   fi
   
-  # Останавливаем временный сервер
-  nginx -s quit
-  sleep 2
+  echo "Stopping temporary nginx..."
+  stop_nginx
 fi
 
 # Запускаем основной HTTPS сервер
