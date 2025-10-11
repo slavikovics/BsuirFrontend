@@ -34,7 +34,7 @@ export const ScheduleLesson = ({ lesson, onAddTaskClick }) => {
         <Button
           variant="ghost"
           size="icon"
-          className="h-5 w-5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-5 w-5 ml-1"
           onClick={(e) => {
             e.stopPropagation()
             onAddTaskClick(lesson)
