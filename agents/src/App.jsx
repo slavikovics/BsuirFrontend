@@ -1,5 +1,6 @@
 import { Header } from "./components/ui/header"
-import { Schedule } from "./components/ui/schedule"
+import { Schedule } from './components/ui/schedule/index'
+//import { Schedule } from "./components/ui/schedule"
 
 function App() {
   return (
