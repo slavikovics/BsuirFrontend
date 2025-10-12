@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"  # Map to Vite dev server port
+      - "3000:3000"
     restart: always
     container_name: vite_react_container
     volumes:

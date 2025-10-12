@@ -1,10 +1,24 @@
 // components/schedule/add-task-dialog.jsx
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../dialog"
-import { Input } from "../input"
-import { Label } from "../label"
-import { Textarea } from "../textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select"
-import { Button } from "../button"
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "../dialog";
+import { Input } from "../input";
+import { Label } from "../label";
+import { Textarea } from "../textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "../select";
+import { Button } from "../button";
 
 export const AddTaskDialog = ({
   isOpen,
@@ -14,6 +28,56 @@ export const AddTaskDialog = ({
   onTaskChange,
   onAddTask
 }) => {
+  const empty = { title: "", description: "", priority: "low", deadline: "" };
+  const [localTask, setLocalTask] = useState(newTask ?? empty);
+
+  // Sync local state when dialog opens or when newTask prop changes while closed
+  useEffect(() => {
+    if (isOpen) {
+      setLocalTask(newTask ?? empty);
+    }
+    // Intentionally only sync when dialog opens or newTask reference changes
+  }, [isOpen, newTask]);
+
+  // Field updater
+  const updateField = useCallback((field, value) => {
+    setLocalTask(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleTitleChange = useCallback(
+    (e) => updateField("title", e.target.value),
+    [updateField]
+  );
+
+  const handleDescriptionChange = useCallback(
+    (e) => updateField("description", e.target.value),
+    [updateField]
+  );
+
+  const handlePriorityChange = useCallback(
+    (value) => updateField("priority", value),
+    [updateField]
+  );
+
+  const handleDeadlineChange = useCallback(
+    (e) => updateField("deadline", e.target.value),
+    [updateField]
+  );
+
+  const handleCancel = useCallback(() => {
+    // Optionally inform parent about cancel via onOpenChange only
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  const handleSave = useCallback(() => {
+    // Send final task to parent
+    if (onAddTask) onAddTask(localTask);
+    // Optionally inform parent about the change to external state
+    if (onTaskChange) onTaskChange(localTask);
+    // Close dialog
+    onOpenChange(false);
+  }, [localTask, onAddTask, onOpenChange, onTaskChange]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
@@ -23,36 +87,36 @@ export const AddTaskDialog = ({
             Для предмета: {selectedLesson?.name}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-2 py-1">
           <div className="grid gap-1">
             <Label htmlFor="title" className="text-xs">Название задачи</Label>
             <Input
               id="title"
-              value={newTask.title}
-              onChange={(e) => onTaskChange({...newTask, title: e.target.value})}
+              value={localTask.title}
+              onChange={handleTitleChange}
               className="h-8 text-sm"
             />
           </div>
-          
+
           <div className="grid gap-1">
             <Label htmlFor="description" className="text-xs">Описание</Label>
             <Textarea
               id="description"
               rows={2}
-              value={newTask.description}
-              onChange={(e) => onTaskChange({...newTask, description: e.target.value})}
+              value={localTask.description}
+              onChange={handleDescriptionChange}
               placeholder="Опишите детали задачи..."
               className="text-sm"
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
             <div className="grid gap-1">
               <Label htmlFor="priority" className="text-xs">Приоритет</Label>
-              <Select 
-                value={newTask.priority} 
-                onValueChange={(value) => onTaskChange({...newTask, priority: value})}
+              <Select
+                value={localTask.priority}
+                onValueChange={handlePriorityChange}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
@@ -64,29 +128,29 @@ export const AddTaskDialog = ({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="grid gap-1">
               <Label htmlFor="deadline" className="text-xs">Срок выполнения</Label>
               <Input
                 id="deadline"
                 type="date"
-                value={newTask.deadline}
-                onChange={(e) => onTaskChange({...newTask, deadline: e.target.value})}
+                value={localTask.deadline}
+                onChange={handleDeadlineChange}
                 className="h-8 text-xs"
               />
             </div>
           </div>
         </div>
-        
+
         <DialogFooter className="gap-1">
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="sm" className="h-8">
+          <Button variant="outline" onClick={handleCancel} size="sm" className="h-8">
             Отмена
           </Button>
-          <Button onClick={onAddTask} size="sm" className="h-8">
+          <Button onClick={handleSave} size="sm" className="h-8">
             Добавить
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};
