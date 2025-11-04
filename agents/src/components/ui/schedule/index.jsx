@@ -1,8 +1,9 @@
-// components/schedule/index.jsx
+// components/schedule/index.jsx (обновленный рендеринг TaskPopup)
 import { Button } from "../button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { ScheduleCarousel } from "./schedule-carousel"
 import { AddTaskDialog } from "./add-task-dialog"
+import { TaskPopup } from "./task-popup"
 import { useSchedule } from "./use-schedule"
 
 export const Schedule = () => {
@@ -10,14 +11,19 @@ export const Schedule = () => {
     schedule,
     expandedDayIndex,
     isAddTaskDialogOpen,
+    isTaskPopupOpen,
     selectedLesson,
-    newTask,
+    selectedTask,
     scrollContainerRef,
-    setNewTask,
     setIsAddTaskDialogOpen,
+    setIsTaskPopupOpen,
     handleDayClick,
     handleAddTaskClick,
+    handleTaskClick,
     handleAddTask,
+    handleEditTask,
+    handleDeleteTask,
+    handleToggleTaskComplete,
     handleMouseDown,
     handleMouseLeave,
     handleMouseUp,
@@ -56,13 +62,13 @@ export const Schedule = () => {
         scrollContainerRef={scrollContainerRef}
         onDayClick={handleDayClick}
         onAddTaskClick={handleAddTaskClick}
+        onTaskClick={handleTaskClick}
         onMouseDown={handleMouseDown}
         onMouseLeave={handleMouseLeave}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
       />
 
-      {/* Подсказка */}
       <div className="text-center mt-4">
         <p className="text-sm text-muted-foreground">
           Кликните на день, чтобы расширить его • Перетягивайте для прокрутки • Используйте стрелки для навигации
@@ -73,10 +79,21 @@ export const Schedule = () => {
         isOpen={isAddTaskDialogOpen}
         onOpenChange={setIsAddTaskDialogOpen}
         selectedLesson={selectedLesson}
-        newTask={newTask}
-        onTaskChange={setNewTask}
         onAddTask={handleAddTask}
       />
+
+      {/* Рендерим TaskPopup только если есть задача и урок */}
+      {selectedTask && selectedLesson && (
+        <TaskPopup
+          isOpen={isTaskPopupOpen}
+          onOpenChange={setIsTaskPopupOpen}
+          task={selectedTask}
+          lesson={selectedLesson}
+          onEdit={handleEditTask}
+          onDelete={handleDeleteTask}
+          onToggleComplete={handleToggleTaskComplete}
+        />
+      )}
     </div>
   )
 }

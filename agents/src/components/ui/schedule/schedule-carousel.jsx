@@ -7,6 +7,7 @@ export const ScheduleCarousel = ({
   scrollContainerRef,
   onDayClick,
   onAddTaskClick,
+  onTaskClick,
   onMouseDown,
   onMouseLeave,
   onMouseUp,
@@ -30,6 +31,7 @@ export const ScheduleCarousel = ({
           isExpanded={expandedDayIndex === index}
           onDayClick={onDayClick}
           onAddTaskClick={onAddTaskClick}
+          onTaskClick={onTaskClick}
         />
       ))}
     </div>

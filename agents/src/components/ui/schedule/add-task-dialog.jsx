@@ -1,4 +1,4 @@
-// components/schedule/add-task-dialog.jsx
+// components/schedule/add-task-dialog.jsx (обновленная)
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
@@ -24,22 +24,25 @@ export const AddTaskDialog = ({
   isOpen,
   onOpenChange,
   selectedLesson,
-  newTask,
-  onTaskChange,
   onAddTask
 }) => {
-  const empty = { title: "", description: "", priority: "low", deadline: "" };
-  const [localTask, setLocalTask] = useState(newTask ?? empty);
+  const empty = { 
+    title: `Задание по ${selectedLesson?.name || ''}`, 
+    description: "", 
+    priority: "medium"
+  };
+  const [localTask, setLocalTask] = useState(empty);
 
-  // Sync local state when dialog opens or when newTask prop changes while closed
   useEffect(() => {
     if (isOpen) {
-      setLocalTask(newTask ?? empty);
+      setLocalTask({ 
+        title: `Задание по ${selectedLesson?.name || ''}`, 
+        description: "", 
+        priority: "medium" 
+      });
     }
-    // Intentionally only sync when dialog opens or newTask reference changes
-  }, [isOpen, newTask]);
+  }, [isOpen, selectedLesson]);
 
-  // Field updater
   const updateField = useCallback((field, value) => {
     setLocalTask(prev => ({ ...prev, [field]: value }));
   }, []);
@@ -59,24 +62,20 @@ export const AddTaskDialog = ({
     [updateField]
   );
 
-  const handleDeadlineChange = useCallback(
-    (e) => updateField("deadline", e.target.value),
-    [updateField]
-  );
-
   const handleCancel = useCallback(() => {
-    // Optionally inform parent about cancel via onOpenChange only
     onOpenChange(false);
   }, [onOpenChange]);
 
   const handleSave = useCallback(() => {
-    // Send final task to parent
-    if (onAddTask) onAddTask(localTask);
-    // Optionally inform parent about the change to external state
-    if (onTaskChange) onTaskChange(localTask);
-    // Close dialog
+    if (onAddTask) {
+      onAddTask({
+        ...localTask,
+        id: Date.now().toString(),
+        completed: false
+      });
+    }
     onOpenChange(false);
-  }, [localTask, onAddTask, onOpenChange, onTaskChange]);
+  }, [localTask, onAddTask, onOpenChange]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -111,34 +110,21 @@ export const AddTaskDialog = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="grid gap-1">
-              <Label htmlFor="priority" className="text-xs">Приоритет</Label>
-              <Select
-                value={localTask.priority}
-                onValueChange={handlePriorityChange}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low" className="text-xs">Низкий</SelectItem>
-                  <SelectItem value="medium" className="text-xs">Средний</SelectItem>
-                  <SelectItem value="high" className="text-xs">Высокий</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-1">
-              <Label htmlFor="deadline" className="text-xs">Срок выполнения</Label>
-              <Input
-                id="deadline"
-                type="date"
-                value={localTask.deadline}
-                onChange={handleDeadlineChange}
-                className="h-8 text-xs"
-              />
-            </div>
+          <div className="grid gap-1">
+            <Label htmlFor="priority" className="text-xs">Приоритет</Label>
+            <Select
+              value={localTask.priority}
+              onValueChange={handlePriorityChange}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low" className="text-xs">Низкий</SelectItem>
+                <SelectItem value="medium" className="text-xs">Средний</SelectItem>
+                <SelectItem value="high" className="text-xs">Высокий</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

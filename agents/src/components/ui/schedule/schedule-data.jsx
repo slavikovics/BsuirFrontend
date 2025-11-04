@@ -1,4 +1,4 @@
-// components/schedule/schedule-data.js
+// components/schedule/schedule-data.js (обновленная)
 import { DAYS_OF_WEEK, LESSON_TYPES } from './schedule-types'
 
 export const generateScheduleData = () => {
@@ -24,7 +24,6 @@ export const generateScheduleData = () => {
     const dayName = DAYS_OF_WEEK[dayIndex]
     const formattedDate = date.toLocaleDateString('ru-RU')
     
-    // Генерируем занятия только для будних дней (Пн-Пт)
     const lessons = dayIndex < 5 
       ? Array.from({ length: 2 + Math.floor(Math.random() * 4) }, (_, lessonIndex) => {
           const subject = subjects[Math.floor(Math.random() * subjects.length)]
@@ -37,7 +36,8 @@ export const generateScheduleData = () => {
             type: type,
             teacher: subject.teachers[Math.floor(Math.random() * subject.teachers.length)],
             room: rooms[Math.floor(Math.random() * rooms.length)],
-            time: `${8 + lessonIndex * 2}:00-${9 + lessonIndex * 2}:50`
+            time: `${8 + lessonIndex * 2}:00-${9 + lessonIndex * 2}:50`,
+            task: null // Изначально задач нет
           }
         })
       : []

@@ -7,7 +7,8 @@ export const ScheduleCard = ({
   index, 
   isExpanded, 
   onDayClick, 
-  onAddTaskClick 
+  onAddTaskClick,
+  onTaskClick 
 }) => {
   return (
     <div
@@ -38,6 +39,9 @@ export const ScheduleCard = ({
                 key={lesson.id}
                 lesson={lesson}
                 onAddTaskClick={onAddTaskClick}
+                onTaskClick={onTaskClick}
+                onDayClick={() => onDayClick(index)}
+                isDayExpanded={isExpanded} // Передаем состояние карточки
               />
             ))
           )}
