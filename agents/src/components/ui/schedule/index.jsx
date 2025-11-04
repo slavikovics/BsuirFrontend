@@ -1,4 +1,4 @@
-// components/schedule/index.jsx (обновленный рендеринг TaskPopup)
+// components/schedule/index.jsx
 import { Button } from "../button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { ScheduleCarousel } from "./schedule-carousel"
@@ -9,6 +9,8 @@ import { useSchedule } from "./use-schedule"
 export const Schedule = () => {
   const {
     schedule,
+    loading,
+    error,
     expandedDayIndex,
     isAddTaskDialogOpen,
     isTaskPopupOpen,
@@ -31,6 +33,14 @@ export const Schedule = () => {
     nextDay,
     prevDay
   } = useSchedule()
+
+  if (loading) {
+    return <div className="container mx-auto px-4 pt-12 text-center text-lg">Загрузка расписания...</div>
+  }
+
+  if (error) {
+    return <div className="container mx-auto px-4 pt-12 text-center text-red-500">Ошибка: {error}</div>
+  }
 
   return (
     <div className="container mx-auto px-4 pt-12 pb-6">
@@ -82,7 +92,6 @@ export const Schedule = () => {
         onAddTask={handleAddTask}
       />
 
-      {/* Рендерим TaskPopup только если есть задача и урок */}
       {selectedTask && selectedLesson && (
         <TaskPopup
           isOpen={isTaskPopupOpen}

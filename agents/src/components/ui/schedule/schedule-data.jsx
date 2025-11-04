@@ -1,69 +1,138 @@
-// components/schedule/schedule-data.js (обновленная)
-import { DAYS_OF_WEEK, LESSON_TYPES } from './schedule-types'
+// components/schedule/schedule-data.js
+import { DAYS_OF_WEEK } from './schedule-types'
 
-export const generateScheduleData = () => {
-  const subjects = [
-    { name: "Математический анализ", teachers: ["Проф. Иванов", "Доц. Петрова"] },
-    { name: "Программирование", teachers: ["Проф. Сидоров", "Ст. преп. Козлов"] },
-    { name: "Физика", teachers: ["Проф. Николаев", "Доц. Волкова"] },
-    { name: "Алгоритмы и структуры данных", teachers: ["Проф. Смирнов"] },
-    { name: "Базы данных", teachers: ["Доц. Федорова", "Асс. Ковалев"] },
-    { name: "Веб-разработка", teachers: ["Проф. Михайлов"] },
-    { name: "Иностранный язык", teachers: ["Доц. Яковлева", "Преп. Морозова"] }
-  ]
-  
-  const rooms = ["101", "202", "303", "404", "505", "Актовый зал", "Комп. класс 1", "Комп. класс 2"]
+const GROUP_NUMBER = '321701';
 
-  const schedule = []
-  
-  for (let i = 0; i < 120; i++) {
-    const date = new Date()
-    date.setDate(date.getDate() + i)
-    
-    const dayIndex = (date.getDay() + 6) % 7
-    const dayName = DAYS_OF_WEEK[dayIndex]
-    const formattedDate = date.toLocaleDateString('ru-RU')
-    
-    const lessons = dayIndex < 5 
-      ? Array.from({ length: 2 + Math.floor(Math.random() * 4) }, (_, lessonIndex) => {
-          const subject = subjects[Math.floor(Math.random() * subjects.length)]
-          const typeKeys = Object.keys(LESSON_TYPES)
-          const type = typeKeys[Math.floor(Math.random() * typeKeys.length)]
-          
-          // Добавляем логику для подгрупп
+const TYPE_MAP = {
+  'ЛК': 'LECTURE',
+  'ПЗ': 'PRACTICAL',
+  'ЛР': 'LAB',
+  'Консультация': 'CONSULTATION',
+  'Экзамен': 'EXAM',
+  'КР': 'EXAM',
+  'Зачет': 'EXAM',
+};
+
+export const fetchScheduleData = async () => {
+  try {
+    const currentWeekRes = await fetch('https://iis.bsuir.by/api/v1/schedule/current-week');
+    if (!currentWeekRes.ok) throw new Error('Failed to fetch current week');
+    const currentWeek = await currentWeekRes.json();
+
+    const scheduleRes = await fetch(`https://iis.bsuir.by/api/v1/schedule?studentGroup=${GROUP_NUMBER}`);
+    if (!scheduleRes.ok) throw new Error('Failed to fetch schedule');
+    const data = await scheduleRes.json();
+
+    const [startDay, startMonth, startYear] = data.startDate.split('.').map(Number);
+    const semesterStart = new Date(startYear, startMonth - 1, startDay);
+
+    const [endDay, endMonth, endYear] = data.endDate.split('.').map(Number);
+    const semesterEnd = new Date(endYear, endMonth - 1, endDay);
+
+    const currentDate = new Date(2025, 10, 4); // November 4, 2025
+
+    const schedule = [];
+
+    for (let i = 0; i < 120; i++) {
+      const date = new Date(currentDate.getTime() + i * 24 * 60 * 60 * 1000);
+      const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+      const dayName = DAYS_OF_WEEK[dayIndex];
+      const formattedDate = date.toLocaleDateString('ru-RU');
+
+      const daysFromStart = Math.floor((date - semesterStart) / (24 * 60 * 60 * 1000));
+      const weekNum = Math.max(1, (Math.floor(daysFromStart / 7) % 4) + 1);
+
+      const isWithinSemester = date >= semesterStart && date <= semesterEnd;
+
+      let lessons = [];
+
+      if (isWithinSemester && data.schedules[dayName]) {
+        lessons = data.schedules[dayName]
+          .filter(lesson => {
+            if (lesson.weekNumber && !lesson.weekNumber.includes(weekNum)) return false;
+
+            if (lesson.startLessonDate && lesson.endLessonDate) {
+              const [sDay, sMonth, sYear] = lesson.startLessonDate.split('.').map(Number);
+              const lessonStart = new Date(sYear, sMonth - 1, sDay);
+              const [eDay, eMonth, eYear] = lesson.endLessonDate.split('.').map(Number);
+              const lessonEnd = new Date(eYear, eMonth - 1, eDay);
+              if (date < lessonStart || date > lessonEnd) return false;
+            }
+
+            return true;
+          })
+          .map((lesson, lessonIndex) => {
+            const typeKey = TYPE_MAP[lesson.lessonTypeAbbrev] || 'CONSULTATION';
+            const teacher = lesson.employees?.[0] ? `${lesson.employees[0].lastName} ${lesson.employees[0].firstName.charAt(0)}. ${lesson.employees[0].middleName ? lesson.employees[0].middleName.charAt(0) + '.' : ''}`.trim() : 'Не указан';
+            const room = lesson.auditories?.[0] || 'Не указана';
+            const time = `${lesson.startLessonTime}-${lesson.endLessonTime}`;
+
+            let groupType = 'group';
+            let subgroup = null;
+            if (lesson.numSubgroup > 0) {
+              groupType = 'subgroup';
+              subgroup = lesson.numSubgroup;
+            }
+
+            return {
+              id: `${formattedDate}-${lessonIndex}`,
+              name: lesson.subjectFullName || lesson.subject,
+              type: typeKey,
+              teacher,
+              room,
+              time,
+              groupType,
+              subgroup,
+              task: null,
+              note: lesson.note || null
+            };
+          });
+      }
+
+      data.exams
+        .filter(exam => exam.dateLesson === formattedDate)
+        .forEach((exam, examIndex) => {
+          const typeKey = TYPE_MAP[exam.lessonTypeAbbrev] || 'EXAM';
+          const teacher = exam.employees?.[0] ? `${exam.employees[0].lastName} ${exam.employees[0].firstName.charAt(0)}. ${exam.employees[0].middleName ? exam.employees[0].middleName.charAt(0) + '.' : ''}`.trim() : 'Не указан';
+          const room = exam.auditories?.[0] || 'Не указана';
+          const time = `${exam.startLessonTime}-${exam.endLessonTime}`;
+
           let groupType = 'group';
           let subgroup = null;
-          
-          // Для лабораторных и практических занятий добавляем подгруппы
-          if (type === 'LAB' || type === 'PRACTICAL') {
-            if (Math.random() > 0.5) { // 50% chance для подгруппы
-              groupType = 'subgroup';
-              subgroup = Math.random() > 0.5 ? 1 : 2;
-            }
+          if (exam.numSubgroup > 0) {
+            groupType = 'subgroup';
+            subgroup = exam.numSubgroup;
           }
-          
-          return {
-            id: `${i}-${lessonIndex}`,
-            name: subject.name,
-            type: type,
-            teacher: subject.teachers[Math.floor(Math.random() * subject.teachers.length)],
-            room: rooms[Math.floor(Math.random() * rooms.length)],
-            time: `${8 + lessonIndex * 2}:00-${9 + lessonIndex * 2}:50`,
-            groupType: groupType,
-            subgroup: subgroup,
-            task: null // Изначально задач нет
-          }
-        })
-      : []
 
-    schedule.push({
-      id: i + 1,
-      name: dayName,
-      date: formattedDate,
-      fullDate: date,
-      lessons
-    })
+          lessons.push({
+            id: `${formattedDate}-exam-${examIndex}`,
+            name: exam.subjectFullName || exam.subject,
+            type: typeKey,
+            teacher,
+            room,
+            time,
+            groupType,
+            subgroup,
+            task: null,
+            note: exam.note || null,
+            isExam: true
+          });
+        });
+
+      lessons.sort((a, b) => a.time.localeCompare(b.time));
+
+      schedule.push({
+        id: i + 1,
+        name: dayName,
+        date: formattedDate,
+        fullDate: new Date(date),
+        lessons
+      });
+    }
+
+    return schedule;
+  } catch (error) {
+    console.error('Error fetching schedule:', error);
+    return [];
   }
-  
-  return schedule
-}
+};

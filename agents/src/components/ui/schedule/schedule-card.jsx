@@ -14,7 +14,7 @@ export const ScheduleCard = ({
     <div
       className={`flex-none cursor-pointer transition-all duration-300 rounded-lg ${
         isExpanded 
-          ? 'w-80 scale-105'
+          ? 'w-80 scale-105 shadow-lg ring-2 ring-primary/30 ring-offset-2 dark:ring-primary/20'
           : 'w-64 scale-100 opacity-90 shadow-sm hover:scale-[1.02] hover:shadow-md'
       }`}
       onClick={() => onDayClick(index)}
@@ -41,7 +41,7 @@ export const ScheduleCard = ({
                 onAddTaskClick={onAddTaskClick}
                 onTaskClick={onTaskClick}
                 onDayClick={() => onDayClick(index)}
-                isDayExpanded={isExpanded} // Передаем состояние карточки
+                isDayExpanded={isExpanded}
               />
             ))
           )}

@@ -1,4 +1,4 @@
-// components/schedule/add-task-dialog.jsx (обновленная)
+// components/schedule/add-task-dialog.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
@@ -26,19 +26,20 @@ export const AddTaskDialog = ({
   selectedLesson,
   onAddTask
 }) => {
-  const empty = { 
-    title: `Задание по ${selectedLesson?.name || ''}`, 
-    description: "", 
-    priority: "medium"
-  };
-  const [localTask, setLocalTask] = useState(empty);
+  const [localTask, setLocalTask] = useState({
+    title: "",
+    description: "",
+    priority: "medium",
+    deadline: ""
+  });
 
   useEffect(() => {
-    if (isOpen) {
-      setLocalTask({ 
-        title: `Задание по ${selectedLesson?.name || ''}`, 
-        description: "", 
-        priority: "medium" 
+    if (isOpen && selectedLesson) {
+      setLocalTask({
+        title: `Задание по ${selectedLesson.name || ''}`,
+        description: "",
+        priority: "medium",
+        deadline: ""
       });
     }
   }, [isOpen, selectedLesson]);
@@ -62,12 +63,17 @@ export const AddTaskDialog = ({
     [updateField]
   );
 
+  const handleDeadlineChange = useCallback(
+    (e) => updateField("deadline", e.target.value),
+    [updateField]
+  );
+
   const handleCancel = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
 
   const handleSave = useCallback(() => {
-    if (onAddTask) {
+    if (localTask.title.trim() && onAddTask) {
       onAddTask({
         ...localTask,
         id: Date.now().toString(),
@@ -110,21 +116,34 @@ export const AddTaskDialog = ({
             />
           </div>
 
-          <div className="grid gap-1">
-            <Label htmlFor="priority" className="text-xs">Приоритет</Label>
-            <Select
-              value={localTask.priority}
-              onValueChange={handlePriorityChange}
-            >
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low" className="text-xs">Низкий</SelectItem>
-                <SelectItem value="medium" className="text-xs">Средний</SelectItem>
-                <SelectItem value="high" className="text-xs">Высокий</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1">
+              <Label htmlFor="priority" className="text-xs">Приоритет</Label>
+              <Select 
+                value={localTask.priority} 
+                onValueChange={handlePriorityChange}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low" className="text-xs">Низкий</SelectItem>
+                  <SelectItem value="medium" className="text-xs">Средний</SelectItem>
+                  <SelectItem value="high" className="text-xs">Высокий</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-1">
+              <Label htmlFor="deadline" className="text-xs">Срок выполнения</Label>
+              <Input
+                id="deadline"
+                type="date"
+                value={localTask.deadline}
+                onChange={handleDeadlineChange}
+                className="h-8 text-xs"
+              />
+            </div>
           </div>
         </div>
 

@@ -1,89 +1,37 @@
 // components/schedule.jsx
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "./button"
 import { Card, CardContent, CardHeader, CardTitle } from "./card"
-import { Plus, ChevronLeft, ChevronRight, Clock, MapPin, User } from "lucide-react"
+import { Plus, ChevronLeft, ChevronRight, Clock, MapPin, User, CheckCircle2, Circle } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./dialog"
 import { Input } from "./input"
 import { Label } from "./label"
 import { Textarea } from "./textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select"
-
-// Типы занятий
-const LESSON_TYPES = {
-  LECTURE: { label: "Лекция", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-  PRACTICAL: { label: "Практика", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-  LAB: { label: "Лаб.", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300" },
-  SEMINAR: { label: "Семинар", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300" }
-}
-
-// Генерация данных для 120 дней
-const generateScheduleData = () => {
-  const daysOfWeek = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
-  const subjects = [
-    { name: "Математический анализ", teachers: ["Проф. Иванов", "Доц. Петрова"] },
-    { name: "Программирование", teachers: ["Проф. Сидоров", "Ст. преп. Козлов"] },
-    { name: "Физика", teachers: ["Проф. Николаев", "Доц. Волкова"] },
-    { name: "Алгоритмы и структуры данных", teachers: ["Проф. Смирнов"] },
-    { name: "Базы данных", teachers: ["Доц. Федорова", "Асс. Ковалев"] },
-    { name: "Веб-разработка", teachers: ["Проф. Михайлов"] },
-    { name: "Иностранный язык", teachers: ["Доц. Яковлева", "Преп. Морозова"] }
-  ]
-  const rooms = ["101", "202", "303", "404", "505", "Актовый зал", "Комп. класс 1", "Комп. класс 2"]
-
-  const schedule = []
-  
-  for (let i = 0; i < 120; i++) {
-    const date = new Date()
-    date.setDate(date.getDate() + i)
-    
-    const dayIndex = (date.getDay() + 6) % 7 // Преобразуем к 0=Пн, 6=Вс
-    const dayName = daysOfWeek[dayIndex]
-    const formattedDate = date.toLocaleDateString('ru-RU')
-    
-    // Генерируем занятия только для будних дней (Пн-Пт)
-    const lessons = dayIndex < 5 
-      ? Array.from({ length: 2 + Math.floor(Math.random() * 4) }, (_, lessonIndex) => {
-          const subject = subjects[Math.floor(Math.random() * subjects.length)]
-          const typeKeys = Object.keys(LESSON_TYPES)
-          const type = typeKeys[Math.floor(Math.random() * typeKeys.length)]
-          
-          return {
-            id: `${i}-${lessonIndex}`,
-            name: subject.name,
-            type: type,
-            teacher: subject.teachers[Math.floor(Math.random() * subject.teachers.length)],
-            room: rooms[Math.floor(Math.random() * rooms.length)],
-            time: `${8 + lessonIndex * 2}:00-${9 + lessonIndex * 2}:50`
-          }
-        })
-      : []
-
-    schedule.push({
-      id: i + 1,
-      name: dayName,
-      date: formattedDate,
-      fullDate: date,
-      lessons
-    })
-  }
-  
-  return schedule
-}
+import { useSchedule } from "./use-schedule"
 
 export function Schedule() {
-  const [schedule] = useState(generateScheduleData())
-  const [expandedDayIndex, setExpandedDayIndex] = useState(null)
-  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false)
-  const [selectedLesson, setSelectedLesson] = useState(null)
-  const scrollContainerRef = useRef(null)
-  
-  // Состояния для перетягивания
-  const [isDragging, setIsDragging] = useState(false)
-  const [startX, setStartX] = useState(0)
-  const [scrollLeft, setScrollLeft] = useState(0)
+  const {
+    schedule,
+    loading,
+    error,
+    expandedDayIndex,
+    isAddTaskDialogOpen,
+    selectedLesson,
+    scrollContainerRef,
+    LESSON_TYPES,
+    handleDayClick,
+    handleAddTaskClick,
+    handleAddTask,
+    handleMouseDown,
+    handleMouseLeave,
+    handleMouseUp,
+    handleMouseMove,
+    nextDay,
+    prevDay,
+    setIsAddTaskDialogOpen,
+  } = useSchedule()
 
-  // Данные для новой задачи
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -91,145 +39,35 @@ export function Schedule() {
     deadline: ""
   })
 
-  // Функция для центрирования карточки
-  const scrollToDay = (index, isExpanded = false) => {
-    if (!scrollContainerRef.current) return
-    
-    const container = scrollContainerRef.current
-    const cardWidth = isExpanded ? 320 : 256 // w-80 или w-64
-    const gap = 16 // space-x-4
-    const containerWidth = container.clientWidth
-    
-    // Позиция для центрирования карточки
-    const scrollPosition = index * (256 + gap) - (containerWidth / 2) + (cardWidth / 2)
-    
-    // Ограничиваем прокрутку, чтобы крайние карточки не обрезались
-    const maxScroll = container.scrollWidth - containerWidth
-    const constrainedPosition = Math.max(0, Math.min(scrollPosition, maxScroll))
-    
-    container.scrollTo({
-      left: constrainedPosition,
-      behavior: 'smooth'
-    })
+  // Ранний возврат
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 pt-12 text-center">
+        <div className="text-lg">Загрузка расписания...</div>
+      </div>
+    )
   }
 
-  // Обработчики для перетягивания
-  const handleMouseDown = (e) => {
-    setIsDragging(true)
-    setStartX(e.pageX - scrollContainerRef.current.offsetLeft)
-    setScrollLeft(scrollContainerRef.current.scrollLeft)
-    scrollContainerRef.current.style.cursor = 'grabbing'
-    scrollContainerRef.current.style.userSelect = 'none'
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 pt-12 text-center">
+        <div className="text-red-500">Ошибка: {error}</div>
+      </div>
+    )
   }
 
-  const handleMouseLeave = () => {
-    if (isDragging) {
-      setIsDragging(false)
-      scrollContainerRef.current.style.cursor = 'grab'
-    }
-  }
+  const handleSubmitTask = () => {
+    if (!newTask.title.trim()) return
 
-  const handleMouseUp = () => {
-    setIsDragging(false)
-    scrollContainerRef.current.style.cursor = 'grab'
-    scrollContainerRef.current.style.removeProperty('user-select')
-  }
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return
-    e.preventDefault()
-    const x = e.pageX - scrollContainerRef.current.offsetLeft
-    const walk = (x - startX) * 2 // Умножаем для более быстрой прокрутки
-    scrollContainerRef.current.scrollLeft = scrollLeft - walk
-  }
-
-  // Простая навигация стрелками - просто прокрутка
-  const nextDay = () => {
-    if (!scrollContainerRef.current) return
-    
-    const container = scrollContainerRef.current
-    const dayWidth = 272 // w-64 (256px) + gap (16px)
-    const scrollAmount = dayWidth * 3 // Прокручиваем на 3 дня вперед
-    
-    container.scrollBy({
-      left: scrollAmount,
-      behavior: 'smooth'
-    })
-  }
-
-  const prevDay = () => {
-    if (!scrollContainerRef.current) return
-    
-    const container = scrollContainerRef.current
-    const dayWidth = 272 // w-64 (256px) + gap (16px)
-    const scrollAmount = dayWidth * 3 // Прокручиваем на 3 дня назад
-    
-    container.scrollBy({
-      left: -scrollAmount,
-      behavior: 'smooth'
-    })
-  }
-
-  // Обработчик клика по карточке дня - расширяем/сворачиваем и центрируем
-  const handleDayClick = (index) => {
-    if (expandedDayIndex === index) {
-      // Если кликаем на уже расширенную карточку - сворачиваем
-      setExpandedDayIndex(null)
-    } else {
-      // Расширяем новую карточку и центрируем её
-      setExpandedDayIndex(index)
-      // Небольшая задержка для применения стилей перед центрированием
-      setTimeout(() => {
-        scrollToDay(index, true)
-      }, 10)
-    }
-  }
-
-  const handleAddTaskClick = (lesson) => {
-    setSelectedLesson(lesson)
-    setNewTask({
-      title: `Задание по ${lesson.name}`,
-      description: "",
-      priority: "medium",
-      deadline: ""
-    })
-    setIsAddTaskDialogOpen(true)
-  }
-
-  const handleAddTask = () => {
-    console.log("Добавлена задача:", {
+    handleAddTask({
       ...newTask,
-      lesson: selectedLesson
+      completed: false,
+      createdAt: new Date().toISOString()
     })
+
+    setNewTask({ title: "", description: "", priority: "medium", deadline: "" })
     setIsAddTaskDialogOpen(false)
-    setSelectedLesson(null)
   }
-
-  // Прокрутка к сегодняшнему дню при загрузке
-  useEffect(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    const todayIndex = schedule.findIndex(day => {
-      const dayDate = new Date(day.fullDate)
-      dayDate.setHours(0, 0, 0, 0)
-      return dayDate.getTime() === today.getTime()
-    })
-    
-    if (todayIndex !== -1) {
-      // Прокручиваем к сегодняшнему дню, но не расширяем его
-      setTimeout(() => {
-        scrollToDay(todayIndex, false)
-      }, 300)
-    }
-  }, [])
-
-  // Устанавливаем курсор grab при загрузке
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab'
-    }
-  }, [])
 
   return (
     <div className="container mx-auto px-4 pt-12 pb-6">
