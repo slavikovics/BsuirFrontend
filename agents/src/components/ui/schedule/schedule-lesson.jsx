@@ -37,7 +37,7 @@ export const ScheduleLesson = ({
 
   return (
     <div 
-      className="border border-gray-200 dark:border-gray-700 rounded p-1.5 hover:bg-accent/5 transition-colors group cursor-pointer"
+      className="border border-border rounded p-1.5 hover:bg-accent/5 transition-colors group cursor-pointer"
       onClick={handleClick}
     >
       <div className="flex justify-between items-start gap-1 mb-1">
@@ -59,10 +59,7 @@ export const ScheduleLesson = ({
 
       {lesson.task ? (
         <div className="mb-1">
-          <TaskBadge 
-            task={lesson.task} 
-            onClick={handleTask}
-          />
+          <TaskBadge task={lesson.task} onClick={handleTask} />
         </div>
       ) : (
         <div className="flex items-center justify-between">
@@ -80,10 +77,12 @@ export const ScheduleLesson = ({
               <span className="truncate">{lesson.teacher}</span>
             </div>
           </div>
+
+          {/* Кнопка +: всегда видна на мобильных, hover на десктопе */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 ml-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-5 w-5 ml-1 flex-shrink-0 opacity-40 group-hover:opacity-100 md:opacity-100 transition-opacity"
             onClick={handleAddTask}
           >
             <Plus className="h-2.5 w-2.5" />

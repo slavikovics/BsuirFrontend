@@ -130,25 +130,29 @@ export const useSchedule = () => {
     setIsTaskPopupOpen(true)
   }, [])
 
-  const handleAddTask = useCallback((taskData) => {
-    if (!selectedLesson) return
+const handleAddTask = useCallback((taskData) => {
+  if (!selectedLesson) return
 
-    const dayIndex = schedule.findIndex(d => d.lessons.some(l => l.id === selectedLesson.id))
+  // Находим dayIndex ДО обновления
+  const dayIndex = schedule.findIndex(d => 
+    d.lessons.some(l => l.id === selectedLesson.id)
+  )
 
-    setSchedule(prev => prev.map(day => ({
-      ...day,
-      lessons: day.lessons.map(l =>
-        l.id === selectedLesson.id ? { ...l, task: taskData } : l
-      )
-    })))
+  setSchedule(prev => prev.map(day => ({
+    ...day,
+    lessons: day.lessons.map(l =>
+      l.id === selectedLesson.id ? { ...l, task: taskData } : l
+    )
+  })))
 
-    setIsAddTaskDialogOpen(false)
-    setSelectedLesson(null)
+  setIsAddTaskDialogOpen(false)
+  setSelectedLesson(null)
 
-    if (dayIndex !== -1) {
-      setTimeout(() => scrollToDay(dayIndex, true), 100)
-    }
-  }, [selectedLesson, schedule, scrollToDay])
+  // Прокручиваем к дню после добавления
+  if (dayIndex !== -1) {
+    setTimeout(() => scrollToDay(dayIndex, true), 100)
+  }
+}, [selectedLesson, schedule, scrollToDay])
 
   const handleEditTask = useCallback((lesson, updatedTask) => {
     setSchedule(prev => prev.map(day => ({
