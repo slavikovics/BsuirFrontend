@@ -29,6 +29,17 @@ export const useSchedule = () => {
   const pendingScrollRef = useRef(null)
   const initialLoadRef = useRef(true)
 
+  // === ФИЛЬТР ПО ПОДГРУППАМ — ДО return! ===
+  const [subgroupFilter, setSubgroupFilter] = useState("all") // all | 1 | 2
+
+  const getFilteredLessons = useCallback((lessons) => {
+    if (subgroupFilter === "all") return lessons
+    return lessons.filter(lesson => {
+      if (lesson.subgroup === null) return true
+      return lesson.subgroup === Number(subgroupFilter)
+    })
+  }, [subgroupFilter])
+
   // === Единый эффект для прокрутки ===
   useLayoutEffect(() => {
     if (pendingScrollRef.current !== null && scrollContainerRef.current) {
@@ -57,7 +68,7 @@ export const useSchedule = () => {
     loadSchedule()
   }, [])
 
-  // === Прокрутка к сегодняшнему дню (только при первоначальной загрузке) ===
+  // === Прокрутка к сегодняшнему дню ===
   useEffect(() => {
     if (loading || schedule.length === 0 || !initialLoadRef.current) return
 
@@ -161,12 +172,10 @@ export const useSchedule = () => {
 
     if (dayIndex === -1) return
 
-    // Сохраняем для прокрутки ТОЛЬКО если день уже был expanded
     if (expandedDayIndex === dayIndex) {
       pendingScrollRef.current = dayIndex
     }
 
-    // Полная иммутабельность
     setSchedule(prev => {
       const newSchedule = [...prev]
       const newDay = { ...newSchedule[dayIndex] }
@@ -186,7 +195,6 @@ export const useSchedule = () => {
 
       newDay.lessons = newLessons
       newSchedule[dayIndex] = newDay
-
       return newSchedule
     })
 
@@ -201,7 +209,6 @@ export const useSchedule = () => {
         l.id === lesson.id ? { ...l, task: updatedTask } : l
       )
     })))
-    // Не устанавливаем pendingScrollRef для редактирования
   }, [])
 
   const handleDeleteTask = useCallback((lesson) => {
@@ -214,7 +221,6 @@ export const useSchedule = () => {
     setIsTaskPopupOpen(false)
     setSelectedLesson(null)
     setSelectedTask(null)
-    // Не устанавливаем pendingScrollRef для удаления
   }, [])
 
   const handleToggleTaskComplete = useCallback((lessonId) => {
@@ -230,7 +236,6 @@ export const useSchedule = () => {
     if (selectedTask && selectedLesson?.id === lessonId) {
       setSelectedTask(prev => ({ ...prev, completed: !prev.completed }))
     }
-    // Не устанавливаем pendingScrollRef для переключения статуса
   }, [selectedLesson, selectedTask])
 
   // === Курсор grab ===
@@ -240,6 +245,7 @@ export const useSchedule = () => {
     }
   }, [])
 
+  // === RETURN — ВСЁ ДОЛЖНО БЫТЬ ДО return ===
   return {
     schedule,
     loading,
@@ -265,6 +271,10 @@ export const useSchedule = () => {
     handleMouseMove,
     nextDay,
     prevDay,
-    LESSON_TYPES
+    LESSON_TYPES,
+    // --- ФИЛЬТР ---
+    subgroupFilter,
+    setSubgroupFilter,
+    getFilteredLessons
   }
 }
