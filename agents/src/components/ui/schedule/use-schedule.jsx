@@ -1,5 +1,5 @@
 // components/schedule/use-schedule.js
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react"
 import { fetchScheduleData } from './schedule-data'
 
 export const LESSON_TYPES = {
@@ -26,7 +26,22 @@ export const useSchedule = () => {
   const [scrollLeft, setScrollLeft] = useState(0)
 
   const scrollContainerRef = useRef(null)
+  const pendingScrollRef = useRef(null)
+  const initialLoadRef = useRef(true)
 
+  // === Единый эффект для прокрутки ===
+  useLayoutEffect(() => {
+    if (pendingScrollRef.current !== null && scrollContainerRef.current) {
+      const index = pendingScrollRef.current
+      pendingScrollRef.current = null
+
+      requestAnimationFrame(() => {
+        scrollToDay(index, expandedDayIndex === index)
+      })
+    }
+  }, [schedule, expandedDayIndex])
+
+  // === Загрузка ===
   useEffect(() => {
     const loadSchedule = async () => {
       setLoading(true)
@@ -42,8 +57,9 @@ export const useSchedule = () => {
     loadSchedule()
   }, [])
 
+  // === Прокрутка к сегодняшнему дню (только при первоначальной загрузке) ===
   useEffect(() => {
-    if (loading || schedule.length === 0) return
+    if (loading || schedule.length === 0 || !initialLoadRef.current) return
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -55,10 +71,13 @@ export const useSchedule = () => {
     })
 
     if (todayIndex !== -1) {
-      setTimeout(() => scrollToDay(todayIndex, false), 300)
+      pendingScrollRef.current = todayIndex
     }
+    
+    initialLoadRef.current = false
   }, [schedule, loading])
 
+  // === scrollToDay ===
   const scrollToDay = useCallback((index, isExpanded = false) => {
     if (!scrollContainerRef.current) return
 
@@ -74,6 +93,7 @@ export const useSchedule = () => {
     container.scrollTo({ left: position, behavior: 'smooth' })
   }, [])
 
+  // === Драг ===
   const handleMouseDown = useCallback((e) => {
     setIsDragging(true)
     setStartX(e.pageX - scrollContainerRef.current.offsetLeft)
@@ -113,6 +133,7 @@ export const useSchedule = () => {
     scrollContainerRef.current.scrollBy({ left: -272 * 3, behavior: 'smooth' })
   }, [])
 
+  // === Обработчики ===
   const handleDayClick = useCallback((index) => {
     const newExpanded = expandedDayIndex === index ? null : index
     setExpandedDayIndex(newExpanded)
@@ -130,29 +151,48 @@ export const useSchedule = () => {
     setIsTaskPopupOpen(true)
   }, [])
 
-const handleAddTask = useCallback((taskData) => {
-  if (!selectedLesson) return
+  // === Добавление задачи с прокруткой ===
+  const handleAddTask = useCallback((taskData) => {
+    if (!selectedLesson) return
 
-  // Находим dayIndex ДО обновления
-  const dayIndex = schedule.findIndex(d => 
-    d.lessons.some(l => l.id === selectedLesson.id)
-  )
-
-  setSchedule(prev => prev.map(day => ({
-    ...day,
-    lessons: day.lessons.map(l =>
-      l.id === selectedLesson.id ? { ...l, task: taskData } : l
+    const dayIndex = schedule.findIndex(day =>
+      day.lessons.some(l => l.id === selectedLesson.id)
     )
-  })))
 
-  setIsAddTaskDialogOpen(false)
-  setSelectedLesson(null)
+    if (dayIndex === -1) return
 
-  // Прокручиваем к дню после добавления
-  if (dayIndex !== -1) {
-    setTimeout(() => scrollToDay(dayIndex, true), 100)
-  }
-}, [selectedLesson, schedule, scrollToDay])
+    // Сохраняем для прокрутки ТОЛЬКО если день уже был expanded
+    if (expandedDayIndex === dayIndex) {
+      pendingScrollRef.current = dayIndex
+    }
+
+    // Полная иммутабельность
+    setSchedule(prev => {
+      const newSchedule = [...prev]
+      const newDay = { ...newSchedule[dayIndex] }
+      const newLessons = [...newDay.lessons]
+
+      const lessonIndex = newLessons.findIndex(l => l.id === selectedLesson.id)
+      if (lessonIndex === -1) return prev
+
+      newLessons[lessonIndex] = {
+        ...newLessons[lessonIndex],
+        task: {
+          ...taskData,
+          id: Date.now().toString(),
+          completed: false
+        }
+      }
+
+      newDay.lessons = newLessons
+      newSchedule[dayIndex] = newDay
+
+      return newSchedule
+    })
+
+    setIsAddTaskDialogOpen(false)
+    setSelectedLesson(null)
+  }, [selectedLesson, schedule, expandedDayIndex])
 
   const handleEditTask = useCallback((lesson, updatedTask) => {
     setSchedule(prev => prev.map(day => ({
@@ -161,9 +201,10 @@ const handleAddTask = useCallback((taskData) => {
         l.id === lesson.id ? { ...l, task: updatedTask } : l
       )
     })))
+    // Не устанавливаем pendingScrollRef для редактирования
   }, [])
 
-  const handleDeleteTask = useCallback((lesson, task) => {
+  const handleDeleteTask = useCallback((lesson) => {
     setSchedule(prev => prev.map(day => ({
       ...day,
       lessons: day.lessons.map(l =>
@@ -173,6 +214,7 @@ const handleAddTask = useCallback((taskData) => {
     setIsTaskPopupOpen(false)
     setSelectedLesson(null)
     setSelectedTask(null)
+    // Не устанавливаем pendingScrollRef для удаления
   }, [])
 
   const handleToggleTaskComplete = useCallback((lessonId) => {
@@ -188,8 +230,10 @@ const handleAddTask = useCallback((taskData) => {
     if (selectedTask && selectedLesson?.id === lessonId) {
       setSelectedTask(prev => ({ ...prev, completed: !prev.completed }))
     }
+    // Не устанавливаем pendingScrollRef для переключения статуса
   }, [selectedLesson, selectedTask])
 
+  // === Курсор grab ===
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.style.cursor = 'grab'
