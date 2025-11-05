@@ -1,7 +1,48 @@
-﻿services:
+services:
+  postgres:
+    image: postgres:15
+    container_name: backend_postgres
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend_network
+
   backend:
     image: backend
+    container_name: backend_app
     build:
       context: .
       dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+volumes:
+  postgres_data:
+
+networks:
+  backend_network:
+    driver: bridge
