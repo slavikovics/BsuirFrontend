@@ -1,5 +1,6 @@
 using backend.DTOs;
 using backend.Services;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
@@ -78,7 +79,7 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        // В случае JWT токенов, logout происходит на клиенте путем удаления токена
+        // With JWT-based auth, logout happens on client by deleting token
         return Ok(new { message = "Logged out successfully" });
     }
 }

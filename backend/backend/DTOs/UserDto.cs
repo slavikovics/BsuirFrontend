@@ -8,6 +8,6 @@ public class UserDto
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string PictureUrl { get; set; } = string.Empty;
-    public string Locale { get; set; } = string.Empty;
+    public string? Locale { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }

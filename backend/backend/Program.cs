@@ -18,7 +18,7 @@ namespace backend
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-            
+
             builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 var connectionString = GetConnectionString(builder.Configuration);
@@ -26,7 +26,7 @@ namespace backend
                 {
                     npgsqlOptions.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
                 });
-                
+
                 if (builder.Environment.IsDevelopment())
                 {
                     options.EnableSensitiveDataLogging();
@@ -40,15 +40,18 @@ namespace backend
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
+            // Configure authentication - note: we populate TokenValidationParameters at runtime in Events.
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
+                    // conservative defaults; actual values are set per-request in OnMessageReceived below.
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
                         ValidateAudience = true,
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
+                        // ValidIssuer/ValidAudience/IssuerSigningKey will be set in Events before validation
                         ValidIssuer = null,
                         ValidAudience = null,
                         IssuerSigningKey = null
@@ -59,15 +62,30 @@ namespace backend
                         OnMessageReceived = async context =>
                         {
                             var keyVault = context.HttpContext.RequestServices.GetRequiredService<IKeyVaultService>();
-                            
+
+                            // Get secrets (EnvironmentKeyVaultService should return sync/async quickly).
                             var secret = await keyVault.GetJwtSecretAsync();
                             var issuer = await keyVault.GetJwtIssuerAsync();
                             var audience = await keyVault.GetJwtAudienceAsync();
 
-                            context.Options.TokenValidationParameters.ValidIssuer = issuer;
-                            context.Options.TokenValidationParameters.ValidAudience = audience;
-                            context.Options.TokenValidationParameters.IssuerSigningKey = 
-                                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+                            if (!string.IsNullOrEmpty(secret))
+                            {
+                                context.Options.TokenValidationParameters.IssuerSigningKey =
+                                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+                            }
+
+                            if (!string.IsNullOrEmpty(issuer))
+                            {
+                                context.Options.TokenValidationParameters.ValidIssuer = issuer;
+                            }
+
+                            if (!string.IsNullOrEmpty(audience))
+                            {
+                                context.Options.TokenValidationParameters.ValidAudience = audience;
+                            }
+
+                            // Extract token from Authorization header (default behavior). This event runs before token validation.
+                            await Task.CompletedTask;
                         }
                     };
                 });
@@ -77,16 +95,11 @@ namespace backend
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("ReactApp", policy =>
+                options.AddPolicy("AllowAll", policy =>
                 {
-                    policy.WithOrigins(
-                        "http://localhost:3000", 
-                        "https://localhost:3000",
-                        "http://frontend:3000",
-                        "https://frontend:3000")
-                          .AllowAnyHeader()
-                          .AllowAnyMethod()
-                          .AllowCredentials();
+                    policy.AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
                 });
             });
 
@@ -97,8 +110,9 @@ namespace backend
                 app.MapOpenApi();
             }
 
-            app.MapGet("/health", () => Results.Ok(new { 
-                status = "Healthy", 
+            app.MapGet("/health", () => Results.Ok(new
+            {
+                status = "Healthy",
                 timestamp = DateTime.UtcNow,
                 environment = app.Environment.EnvironmentName,
                 database = "PostgreSQL"
@@ -107,18 +121,18 @@ namespace backend
             ApplyMigrations(app);
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
-            app.UseHttpsRedirection();
-            app.UseCors("ReactApp");
+            app.UseCors("AllowAll"); // ensure CORS middleware is active
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
 
+            builder.WebHost.UseUrls("http://0.0.0.0:8080");
             app.Run();
         }
 
         private static void LoadEnvFile()
         {
-            var envFilePath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+            var envFilePath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).FullName, ".env");
             if (File.Exists(envFilePath))
             {
                 foreach (var line in File.ReadAllLines(envFilePath))
@@ -142,7 +156,7 @@ namespace backend
                 return $"Host=postgres;Port=5432;Database={db};Username={user};Password={password}";
             }
 
-            return configuration.GetConnectionString("DefaultConnection") 
+            return configuration.GetConnectionString("DefaultConnection")
                 ?? "Host=localhost;Port=5432;Database=backend;Username=postgres;Password=postgres";
         }
 
@@ -155,7 +169,7 @@ namespace backend
             try
             {
                 logger.LogInformation("Applying database migrations...");
-                
+
                 var pendingMigrations = dbContext.Database.GetPendingMigrations();
                 if (pendingMigrations.Any())
                 {

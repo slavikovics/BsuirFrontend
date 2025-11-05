@@ -16,7 +16,7 @@ public class UserService : IUserService
     }
 
     public async Task<User> CreateOrUpdateUserAsync(string googleId, string email, string fullName, string givenName,
-        string surname, string pictureUrl, string locale)
+        string surname, string pictureUrl, string? locale)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
 
@@ -30,7 +30,7 @@ public class UserService : IUserService
                 FirstName = givenName,
                 LastName = surname,
                 PictureUrl = pictureUrl,
-                Locale = locale,
+                Locale = locale ?? "en",
                 CreatedAt = DateTime.UtcNow,
                 LastLogin = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -46,7 +46,7 @@ public class UserService : IUserService
             user.FirstName = givenName;
             user.LastName = surname;
             user.PictureUrl = pictureUrl;
-            user.Locale = locale;
+            user.Locale = locale ?? "en";
             user.LastLogin = DateTime.UtcNow;
             user.UpdatedAt = DateTime.UtcNow;
 
