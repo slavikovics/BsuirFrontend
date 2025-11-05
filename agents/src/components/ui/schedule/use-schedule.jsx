@@ -1,5 +1,5 @@
 // components/schedule/use-schedule.js
-import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react"
+import { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from "react"
 import { fetchScheduleData } from './schedule-data'
 
 export const LESSON_TYPES = {
@@ -29,16 +29,21 @@ export const useSchedule = () => {
   const pendingScrollRef = useRef(null)
   const initialLoadRef = useRef(true)
 
-  // === ФИЛЬТР ПО ПОДГРУППАМ — ДО return! ===
+  // === ФИЛЬТР ПО ПОДГРУППАМ ===
   const [subgroupFilter, setSubgroupFilter] = useState("all") // all | 1 | 2
 
-  const getFilteredLessons = useCallback((lessons) => {
-    if (subgroupFilter === "all") return lessons
-    return lessons.filter(lesson => {
-      if (lesson.subgroup === null) return true
-      return lesson.subgroup === Number(subgroupFilter)
-    })
-  }, [subgroupFilter])
+  // === ФИЛЬТРОВАННОЕ РАСПИСАНИЕ — ОДИН РАЗ! ===
+  const filteredSchedule = useMemo(() => {
+    if (subgroupFilter === "all") return schedule
+
+    return schedule.map(day => ({
+      ...day,
+      lessons: day.lessons.filter(lesson => {
+        if (lesson.subgroup === null) return true
+        return lesson.subgroup === Number(subgroupFilter)
+      })
+    }))
+  }, [schedule, subgroupFilter])
 
   // === Единый эффект для прокрутки ===
   useLayoutEffect(() => {
@@ -50,7 +55,7 @@ export const useSchedule = () => {
         scrollToDay(index, expandedDayIndex === index)
       })
     }
-  }, [schedule, expandedDayIndex])
+  }, [filteredSchedule, expandedDayIndex]) // ← используем filteredSchedule
 
   // === Загрузка ===
   useEffect(() => {
@@ -70,12 +75,12 @@ export const useSchedule = () => {
 
   // === Прокрутка к сегодняшнему дню ===
   useEffect(() => {
-    if (loading || schedule.length === 0 || !initialLoadRef.current) return
+    if (loading || filteredSchedule.length === 0 || !initialLoadRef.current) return
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const todayIndex = schedule.findIndex(day => {
+    const todayIndex = filteredSchedule.findIndex(day => {
       const dayDate = new Date(day.fullDate)
       dayDate.setHours(0, 0, 0, 0)
       return dayDate.getTime() === today.getTime()
@@ -86,7 +91,7 @@ export const useSchedule = () => {
     }
     
     initialLoadRef.current = false
-  }, [schedule, loading])
+  }, [filteredSchedule, loading])
 
   // === scrollToDay ===
   const scrollToDay = useCallback((index, isExpanded = false) => {
@@ -245,9 +250,9 @@ export const useSchedule = () => {
     }
   }, [])
 
-  // === RETURN — ВСЁ ДОЛЖНО БЫТЬ ДО return ===
+  // === RETURN ===
   return {
-    schedule,
+    schedule: filteredSchedule, // ← ОТФИЛЬТРОВАННОЕ РАСПИСАНИЕ
     loading,
     error,
     expandedDayIndex,
@@ -272,9 +277,8 @@ export const useSchedule = () => {
     nextDay,
     prevDay,
     LESSON_TYPES,
-    // --- ФИЛЬТР ---
     subgroupFilter,
-    setSubgroupFilter,
-    getFilteredLessons
+    setSubgroupFilter
+    // getFilteredLessons УДАЛЁН
   }
 }
