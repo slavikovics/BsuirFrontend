@@ -8,5 +8,8 @@ public interface IUserService
         string pictureUrl, string locale);
 
     Task<User?> GetUserByGoogleIdAsync(string googleId);
+    
     Task<User?> GetUserByIdAsync(int id);
+    
+    Task<User?> UpdateUserGroupAsync(int userId, int? groupNumber);
 }

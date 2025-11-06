@@ -19,6 +19,7 @@ import {
 import { GoogleLogin } from "@react-oauth/google"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { LogOut, User, Settings } from "lucide-react"
+import { SettingsDialog } from "./ui/settings-dialog"
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8081"
 
@@ -26,6 +27,7 @@ export function AuthComponent() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   // Отправка ID token (credential) на бэкенд для верификации и получения JWT
@@ -74,6 +76,12 @@ export function AuthComponent() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleUserUpdate = (updatedUser) => {
+    setUser(updatedUser)
+    setProfile(updatedUser)
+    localStorage.setItem("user_data", JSON.stringify(updatedUser))
   }
 
   // Проверка статус-аутентификации при загрузке компонента
@@ -202,6 +210,11 @@ export function AuthComponent() {
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{profile.fullName}</p>
                 <p className="text-xs leading-none text-muted-foreground">{profile.email}</p>
+                {profile.groupNumber && (
+                  <p className="text-xs leading-none text-muted-foreground">
+                    Группа: {profile.groupNumber}
+                  </p>
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -209,7 +222,7 @@ export function AuthComponent() {
               <User className="mr-2 h-4 w-4" />
               <span>Профиль</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Настройки</span>
             </DropdownMenuItem>
@@ -270,6 +283,12 @@ export function AuthComponent() {
           </Dialog>
         </>
       )}
+      <SettingsDialog
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        user={user}
+        onUserUpdate={handleUserUpdate}
+      />
     </div>
   )
 }

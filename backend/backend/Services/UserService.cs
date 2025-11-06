@@ -31,6 +31,7 @@ public class UserService : IUserService
                 LastName = surname,
                 PictureUrl = pictureUrl,
                 Locale = locale ?? "en",
+                GroupNumber = null,
                 CreatedAt = DateTime.UtcNow,
                 LastLogin = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -55,6 +56,31 @@ public class UserService : IUserService
         }
 
         await _context.SaveChangesAsync();
+        return user;
+    }
+    
+    public async Task<User?> UpdateUserGroupAsync(int userId, int? groupNumber)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return null;
+        }
+
+        if (groupNumber.HasValue)
+        {
+            if (groupNumber.Value < 100000 || groupNumber.Value > 999999)
+            {
+                throw new ArgumentException("Group number must be a 6-digit number");
+            }
+        }
+
+        user.GroupNumber = groupNumber;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        
+        _logger.LogInformation("Updated group for user {UserId}: {GroupNumber}", userId, groupNumber);
         return user;
     }
 

@@ -29,7 +29,7 @@ export const fetchScheduleData = async () => {
     const [endDay, endMonth, endYear] = data.endDate.split('.').map(Number);
     const semesterEnd = new Date(endYear, endMonth - 1, endDay);
 
-    const currentDate = new Date(2025, 10, 4); // November 4, 2025
+    const currentDate = new Date()
 
     const schedule = [];
 

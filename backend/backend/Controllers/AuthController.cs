@@ -62,6 +62,7 @@ public class AuthController : ControllerBase
                     LastName = user.LastName,
                     PictureUrl = user.PictureUrl,
                     Locale = user.Locale,
+                    GroupNumber = user.GroupNumber,
                     CreatedAt = user.CreatedAt
                 },
                 ExpiresAt = expiresAt

@@ -9,5 +9,6 @@ public class UserDto
     public string LastName { get; set; } = string.Empty;
     public string PictureUrl { get; set; } = string.Empty;
     public string? Locale { get; set; } = string.Empty;
+    public int? GroupNumber { get; set; }
     public DateTime CreatedAt { get; set; }
 }
