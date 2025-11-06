@@ -1,6 +1,6 @@
 // auth-component.jsx
 import { useState, useEffect } from "react"
-import { Button } from "./ui/button"
+import { Button } from "./button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,18 +8,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu"
+} from "./dropdown-menu"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog"
+} from "./dialog"
 import { GoogleLogin } from "@react-oauth/google"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "./avatar"
 import { LogOut, User, Settings } from "lucide-react"
-import { SettingsDialog } from "./ui/settings-dialog"
+import { SettingsDialog } from "./settings-dialog"
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8081"
 
@@ -29,6 +29,18 @@ export function AuthComponent() {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const handleOpenSettings = () => {
+      setIsSettingsOpen(true)
+    }
+
+    window.addEventListener('open-settings', handleOpenSettings)
+    
+    return () => {
+      window.removeEventListener('open-settings', handleOpenSettings)
+    }
+  }, [])
 
   // Отправка ID token (credential) на бэкенд для верификации и получения JWT
   const authenticateWithBackend = async (idToken) => {

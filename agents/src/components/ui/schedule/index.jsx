@@ -5,9 +5,14 @@ import { ScheduleCarousel } from "./schedule-carousel"
 import { AddTaskDialog } from "./add-task-dialog"
 import { TaskPopup } from "./task-popup"
 import { useSchedule } from "./use-schedule"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select" // ← ДОБАВЬ
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select"
+import { useAuth } from "../auth-component"
+import { Settings } from "lucide-react" // ← ДОБАВЛЯЕМ ИКОНКУ НАСТРОЕК
 
 export const Schedule = () => {
+  const { user } = useAuth()
+  const groupNumber = user?.groupNumber
+
   const {
     schedule,
     loading,
@@ -35,24 +40,62 @@ export const Schedule = () => {
     prevDay,
     subgroupFilter,
     setSubgroupFilter
-  } = useSchedule()
+  } = useSchedule(groupNumber)
+
+  // Если пользователь не указал группу - показываем обычный текст
+  if (!groupNumber) {
+    return (
+      <div className="container mx-auto px-4 pt-12">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold text-foreground">Расписание занятий</h2>
+          <div className="max-w-md mx-auto space-y-3">
+            <p className="text-muted-foreground">
+              Для просмотра расписания необходимо указать номер вашей учебной группы.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Перейдите в настройки профиля и укажите номер группы из 6 цифр.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
-    return <div className="container mx-auto px-4 pt-12 text-center text-lg">Загрузка расписания...</div>
+    return (
+      <div className="container mx-auto px-4 pt-12 text-center">
+        <div className="text-lg text-foreground">Загрузка расписания для группы {groupNumber}...</div>
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="container mx-auto px-4 pt-12 text-center text-red-500">Ошибка: {error}</div>
+    return (
+      <div className="container mx-auto px-4 pt-12 text-center">
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-foreground">Ошибка загрузки</h2>
+          <p className="text-destructive">Ошибка: {error}</p>
+          <p className="text-sm text-muted-foreground">
+            Не удалось загрузить расписание для группы {groupNumber}
+          </p>
+        </div>
+      </div>
+    )
   }
 
-return (
+  return (
     <div className="container mx-auto px-4 pt-12 pb-6">
       {/* ХЕДЕР: Заголовок + ComboBox + Стрелки */}
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold">Расписание занятий</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Расписание занятий</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Группа: {groupNumber}
+          </p>
+        </div>
 
         <div className="flex items-center gap-3">
-          {/* ComboBox — ЛЕВЕЕ стрелок */}
+          {/* ComboBox */}
           <Select value={subgroupFilter} onValueChange={setSubgroupFilter}>
             <SelectTrigger className="w-48 h-9">
               <SelectValue />

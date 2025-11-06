@@ -1,8 +1,6 @@
 // components/schedule/schedule-data.js
 import { DAYS_OF_WEEK } from './schedule-types'
 
-const GROUP_NUMBER = '321701';
-
 const TYPE_MAP = {
   'ЛК': 'LECTURE',
   'ПЗ': 'PRACTICAL',
@@ -13,13 +11,17 @@ const TYPE_MAP = {
   'Зачет': 'EXAM',
 };
 
-export const fetchScheduleData = async () => {
+export const fetchScheduleData = async (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРАМЕТР
+  if (!groupNumber) {
+    return []; // ← ВОЗВРАЩАЕМ ПУСТОЙ МАССИВ ЕСЛИ ГРУППА НЕ УКАЗАНА
+  }
+
   try {
     const currentWeekRes = await fetch('https://iis.bsuir.by/api/v1/schedule/current-week');
     if (!currentWeekRes.ok) throw new Error('Failed to fetch current week');
     const currentWeek = await currentWeekRes.json();
 
-    const scheduleRes = await fetch(`https://iis.bsuir.by/api/v1/schedule?studentGroup=${GROUP_NUMBER}`);
+    const scheduleRes = await fetch(`https://iis.bsuir.by/api/v1/schedule?studentGroup=${groupNumber}`); // ← ИСПОЛЬЗУЕМ groupNumber
     if (!scheduleRes.ok) throw new Error('Failed to fetch schedule');
     const data = await scheduleRes.json();
 

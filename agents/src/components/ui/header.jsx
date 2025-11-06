@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "./button";
 import { ThemeToggle } from "./theme-toggle";
-import { AuthComponent } from "../auth-component";
+import { AuthComponent } from "./auth-component";
 import { BookOpen, GraduationCap, Info, MessageSquare, Menu, X } from "lucide-react";
 
 export const Header = ({ activeTab, onTabChange }) => {

@@ -1,3 +1,4 @@
+// components/settings-dialog.jsx
 import { useState, useEffect } from "react"
 import {
   Dialog,
@@ -10,19 +11,50 @@ import { Button } from "./button"
 import { Input } from "./input"
 import { Label } from "./label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card"
-import { Loader2 } from "lucide-react"
+import { Loader2, RefreshCw } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8081"
 
 export function SettingsDialog({ open, onOpenChange, user, onUserUpdate }) {
   const [groupNumber, setGroupNumber] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [saveStatus, setSaveStatus] = useState("")
+
+  // Функция для загрузки актуальных данных пользователя
+  const refreshUserData = async () => {
+    if (!user) return
+    
+    setIsRefreshing(true)
+    try {
+      const token = localStorage.getItem("jwt_token")
+      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const freshUserData = await response.json()
+        onUserUpdate(freshUserData)
+        setGroupNumber(freshUserData.groupNumber?.toString() || "")
+      }
+    } catch (error) {
+      console.error("Error refreshing user data:", error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   // Инициализируем поле группы при открытии диалога
   useEffect(() => {
     if (open && user) {
       setGroupNumber(user.groupNumber?.toString() || "")
+      
+      // Если группа не загружена, обновляем данные
+      if (user.groupNumber === undefined) {
+        refreshUserData()
+      }
     }
   }, [open, user])
 
@@ -60,11 +92,10 @@ export function SettingsDialog({ open, onOpenChange, user, onUserUpdate }) {
       onUserUpdate(updatedUser)
       setSaveStatus("success:Группа успешно обновлена!")
       
-      // Автоматически закрываем сообщение через 2 секунды
+      // Принудительно перезагружаем страницу через 1 секунду
       setTimeout(() => {
-        setSaveStatus("")
-        onOpenChange(false)
-      }, 2000)
+        window.location.reload()
+      }, 1000)
 
     } catch (error) {
       console.error("Error updating group:", error)
@@ -75,7 +106,7 @@ export function SettingsDialog({ open, onOpenChange, user, onUserUpdate }) {
   }
 
   const handleGroupInputChange = (e) => {
-    const value = e.target.value.replace(/\D/g, "") // Только цифры
+    const value = e.target.value.replace(/\D/g, "")
     if (value === "" || (value.length <= 6 && /^\d*$/.test(value))) {
       setGroupNumber(value)
     }
@@ -85,7 +116,9 @@ export function SettingsDialog({ open, onOpenChange, user, onUserUpdate }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Настройки профиля</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Настройки профиля</span>
+          </DialogTitle>
           <DialogDescription>
             Управление настройками вашего аккаунта
           </DialogDescription>
@@ -148,15 +181,19 @@ export function SettingsDialog({ open, onOpenChange, user, onUserUpdate }) {
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Имя:</span>
-                <span>{user?.fullName}</span>
+                <span>{user?.fullName || "Загрузка..."}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Email:</span>
-                <span>{user?.email}</span>
+                <span>{user?.email || "Загрузка..."}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Текущая группа:</span>
-                <span>{user?.groupNumber || "Не указана"}</span>
+                <span>
+                  {user?.groupNumber !== undefined 
+                    ? (user.groupNumber || "Не указана") 
+                    : "Загрузка..."}
+                </span>
               </div>
             </CardContent>
           </Card>

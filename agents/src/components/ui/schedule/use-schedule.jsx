@@ -10,7 +10,7 @@ export const LESSON_TYPES = {
   EXAM: { label: "Экзамен", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
 }
 
-export const useSchedule = () => {
+export const useSchedule = (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРАМЕТР
   const [schedule, setSchedule] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -30,9 +30,9 @@ export const useSchedule = () => {
   const initialLoadRef = useRef(true)
 
   // === ФИЛЬТР ПО ПОДГРУППАМ ===
-  const [subgroupFilter, setSubgroupFilter] = useState("all") // all | 1 | 2
+  const [subgroupFilter, setSubgroupFilter] = useState("all")
 
-  // === ФИЛЬТРОВАННОЕ РАСПИСАНИЕ — ОДИН РАЗ! ===
+  // === ФИЛЬТРОВАННОЕ РАСПИСАНИЕ ===
   const filteredSchedule = useMemo(() => {
     if (subgroupFilter === "all") return schedule
 
@@ -55,23 +55,31 @@ export const useSchedule = () => {
         scrollToDay(index, expandedDayIndex === index)
       })
     }
-  }, [filteredSchedule, expandedDayIndex]) // ← используем filteredSchedule
+  }, [filteredSchedule, expandedDayIndex])
 
-  // === Загрузка ===
+  // === Загрузка расписания при изменении группы ===
   useEffect(() => {
     const loadSchedule = async () => {
       setLoading(true)
+      setError(null)
       try {
-        const data = await fetchScheduleData()
+        if (!groupNumber) {
+          setSchedule([])
+          return
+        }
+
+        const data = await fetchScheduleData(groupNumber)
         setSchedule(data)
       } catch (err) {
         setError(err.message)
+        setSchedule([])
       } finally {
         setLoading(false)
       }
     }
+
     loadSchedule()
-  }, [])
+  }, [groupNumber]) // ← ЗАВИСИМОСТЬ ОТ ГРУППЫ
 
   // === Прокрутка к сегодняшнему дню ===
   useEffect(() => {
@@ -93,7 +101,7 @@ export const useSchedule = () => {
     initialLoadRef.current = false
   }, [filteredSchedule, loading])
 
-  // === scrollToDay ===
+  // === Остальные функции без изменений ===
   const scrollToDay = useCallback((index, isExpanded = false) => {
     if (!scrollContainerRef.current) return
 
@@ -109,7 +117,6 @@ export const useSchedule = () => {
     container.scrollTo({ left: position, behavior: 'smooth' })
   }, [])
 
-  // === Драг ===
   const handleMouseDown = useCallback((e) => {
     setIsDragging(true)
     setStartX(e.pageX - scrollContainerRef.current.offsetLeft)
@@ -149,7 +156,6 @@ export const useSchedule = () => {
     scrollContainerRef.current.scrollBy({ left: -272 * 3, behavior: 'smooth' })
   }, [])
 
-  // === Обработчики ===
   const handleDayClick = useCallback((index) => {
     const newExpanded = expandedDayIndex === index ? null : index
     setExpandedDayIndex(newExpanded)
@@ -167,7 +173,6 @@ export const useSchedule = () => {
     setIsTaskPopupOpen(true)
   }, [])
 
-  // === Добавление задачи с прокруткой ===
   const handleAddTask = useCallback((taskData) => {
     if (!selectedLesson) return
 
@@ -250,9 +255,8 @@ export const useSchedule = () => {
     }
   }, [])
 
-  // === RETURN ===
   return {
-    schedule: filteredSchedule, // ← ОТФИЛЬТРОВАННОЕ РАСПИСАНИЕ
+    schedule: filteredSchedule,
     loading,
     error,
     expandedDayIndex,
@@ -279,6 +283,5 @@ export const useSchedule = () => {
     LESSON_TYPES,
     subgroupFilter,
     setSubgroupFilter
-    // getFilteredLessons УДАЛЁН
   }
 }
