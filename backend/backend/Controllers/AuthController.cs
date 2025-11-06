@@ -80,7 +80,6 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        // With JWT-based auth, logout happens on client by deleting token
         return Ok(new { message = "Logged out successfully" });
     }
 }

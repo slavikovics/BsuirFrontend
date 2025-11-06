@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using backend.Data;
+using backend.DTOs;
 using backend.Middleware;
 using backend.Services;
 
@@ -39,19 +40,17 @@ namespace backend
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+            builder.Services.AddScoped<ITaskService, TaskService>();
 
-            // Configure authentication - note: we populate TokenValidationParameters at runtime in Events.
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    // conservative defaults; actual values are set per-request in OnMessageReceived below.
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
                         ValidateAudience = true,
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
-                        // ValidIssuer/ValidAudience/IssuerSigningKey will be set in Events before validation
                         ValidIssuer = null,
                         ValidAudience = null,
                         IssuerSigningKey = null
@@ -63,7 +62,6 @@ namespace backend
                         {
                             var keyVault = context.HttpContext.RequestServices.GetRequiredService<IKeyVaultService>();
 
-                            // Get secrets (EnvironmentKeyVaultService should return sync/async quickly).
                             var secret = await keyVault.GetJwtSecretAsync();
                             var issuer = await keyVault.GetJwtIssuerAsync();
                             var audience = await keyVault.GetJwtAudienceAsync();
@@ -84,7 +82,6 @@ namespace backend
                                 context.Options.TokenValidationParameters.ValidAudience = audience;
                             }
 
-                            // Extract token from Authorization header (default behavior). This event runs before token validation.
                             await Task.CompletedTask;
                         }
                     };
@@ -121,7 +118,7 @@ namespace backend
             ApplyMigrations(app);
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
-            app.UseCors("AllowAll"); // ensure CORS middleware is active
+            app.UseCors("AllowAll");
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();

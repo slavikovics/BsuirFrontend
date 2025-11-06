@@ -28,7 +28,6 @@ public class TokenService : ITokenService
 
     public async Task<string> GenerateJwtToken(User user)
     {
-        // Ленивая загрузка секретов при первом использовании
         if (_jwtSecret == null)
         {
             _jwtSecret = await _keyVaultService.GetJwtSecretAsync();
@@ -41,13 +40,12 @@ public class TokenService : ITokenService
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
+            Subject = new ClaimsIdentity([
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim("GoogleId", user.GoogleId),
                 new Claim(ClaimTypes.Name, user.FullName)
-            }),
+            ]),
             Expires = DateTime.UtcNow.AddDays(7),
             SigningCredentials = new SigningCredentials(
                 new SymmetricSecurityKey(key),

@@ -1,4 +1,3 @@
-// components/schedule/task-popup.jsx
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -42,7 +41,6 @@ export const TaskPopup = ({
   const handleSave = () => {
     onEdit(lesson, editedTask);
     setIsEditing(false);
-    onOpenChange(false);
   };
 
   const handleCancel = () => {
@@ -51,8 +49,11 @@ export const TaskPopup = ({
   };
 
   const handleDelete = () => {
-    onDelete(lesson, task);
-    onOpenChange(false);
+    onDelete(lesson);
+  };
+
+  const handleToggleComplete = () => {
+    onToggleComplete(lesson.id);
   };
 
   const getPriorityText = (priority) => {
@@ -61,6 +62,16 @@ export const TaskPopup = ({
       case "medium": return "Средний";
       case "low": return "Низкий";
       default: return "Не указан";
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ru-RU');
+    } catch {
+      return dateString;
     }
   };
 
@@ -84,7 +95,7 @@ export const TaskPopup = ({
               />
               <Textarea
                 rows={3}
-                value={editedTask.description}
+                value={editedTask.description || ""}
                 onChange={(e) => setEditedTask(prev => ({ ...prev, description: e.target.value }))}
                 className="text-sm"
                 placeholder="Описание задачи..."
@@ -122,9 +133,9 @@ export const TaskPopup = ({
                       {task.description}
                     </p>
                   )}
-                  <div className="flex gap-2 text-xs text-gray-500">
-                    <span>Приоритет: {getPriorityText(task.priority)}</span>
-                    {task.deadline && <span>Дедлайн: {task.deadline}</span>}
+                  <div className="space-y-1 text-xs text-gray-500">
+                    <div>Приоритет: {getPriorityText(task.priority)}</div>
+                    <div>Создано: {formatDate(task.createdAt)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 ml-4">
@@ -146,9 +157,17 @@ export const TaskPopup = ({
                 </div>
               </div>
 
+              <div className="bg-muted p-3 rounded-md">
+                <h4 className="text-sm font-medium mb-1">Связанное занятие:</h4>
+                <p className="text-sm">{lesson.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {lesson.time} • {lesson.date}
+                </p>
+              </div>
+
               <Button
                 variant={task.completed ? "default" : "outline"}
-                onClick={() => onToggleComplete(lesson.id)}
+                onClick={handleToggleComplete}
                 className="w-full"
               >
                 {task.completed ? (

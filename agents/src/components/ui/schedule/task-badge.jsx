@@ -1,4 +1,3 @@
-// components/schedule/task-badge.jsx
 import React from "react";
 
 export const TaskBadge = ({ task, onClick }) => {

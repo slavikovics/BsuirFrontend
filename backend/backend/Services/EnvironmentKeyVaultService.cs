@@ -33,7 +33,6 @@ public class EnvironmentKeyVaultService : IKeyVaultService
 
     private Task<string> GetSecretAsync(string envVarName, string configPath, string? defaultValue = null)
     {
-        // Приоритет: Environment Variables > Configuration > Default Value
         var value = Environment.GetEnvironmentVariable(envVarName) 
                     ?? _configuration[configPath] 
                     ?? defaultValue;

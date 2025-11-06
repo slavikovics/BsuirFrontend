@@ -2,6 +2,8 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect, useMemo } from "react"
 import { fetchScheduleData } from './schedule-data'
 
+const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8081"
+
 export const LESSON_TYPES = {
   LECTURE: { label: "Лекция", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
   PRACTICAL: { label: "Практика", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
@@ -10,7 +12,7 @@ export const LESSON_TYPES = {
   EXAM: { label: "Экзамен", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
 }
 
-export const useSchedule = (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРАМЕТР
+export const useSchedule = (groupNumber) => {
   const [schedule, setSchedule] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -45,6 +47,52 @@ export const useSchedule = (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРА
     }))
   }, [schedule, subgroupFilter])
 
+  // === Функция для загрузки задач для занятия ===
+  const fetchTasksForLesson = async (lessonId) => {
+    try {
+      const token = localStorage.getItem("jwt_token")
+      const response = await fetch(`${API_BASE_URL}/api/tasks/lesson/${lessonId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        return await response.json()
+      }
+      return []
+    } catch (error) {
+      console.error("Error fetching tasks for lesson:", error)
+      return []
+    }
+  }
+
+  // === Функция для загрузки всех задач ===
+  const loadTasksForSchedule = async (scheduleData) => {
+    if (!scheduleData.length) return scheduleData
+
+    const scheduleWithTasks = await Promise.all(
+      scheduleData.map(async (day) => {
+        const lessonsWithTasks = await Promise.all(
+          day.lessons.map(async (lesson) => {
+            const tasks = await fetchTasksForLesson(lesson.id)
+            return {
+              ...lesson,
+              task: tasks.length > 0 ? tasks[0] : null // Берем первую задачу (можно изменить логику если нужно несколько)
+            }
+          })
+        )
+
+        return {
+          ...day,
+          lessons: lessonsWithTasks
+        }
+      })
+    )
+
+    return scheduleWithTasks
+  }
+
   // === Единый эффект для прокрутки ===
   useLayoutEffect(() => {
     if (pendingScrollRef.current !== null && scrollContainerRef.current) {
@@ -69,7 +117,8 @@ export const useSchedule = (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРА
         }
 
         const data = await fetchScheduleData(groupNumber)
-        setSchedule(data)
+        const scheduleWithTasks = await loadTasksForSchedule(data)
+        setSchedule(scheduleWithTasks)
       } catch (err) {
         setError(err.message)
         setSchedule([])
@@ -79,7 +128,7 @@ export const useSchedule = (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРА
     }
 
     loadSchedule()
-  }, [groupNumber]) // ← ЗАВИСИМОСТЬ ОТ ГРУППЫ
+  }, [groupNumber])
 
   // === Прокрутка к сегодняшнему дню ===
   useEffect(() => {
@@ -101,7 +150,7 @@ export const useSchedule = (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРА
     initialLoadRef.current = false
   }, [filteredSchedule, loading])
 
-  // === Остальные функции без изменений ===
+  // === Остальные функции ===
   const scrollToDay = useCallback((index, isExpanded = false) => {
     if (!scrollContainerRef.current) return
 
@@ -173,80 +222,162 @@ export const useSchedule = (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРА
     setIsTaskPopupOpen(true)
   }, [])
 
-  const handleAddTask = useCallback((taskData) => {
-    if (!selectedLesson) return
+  // === CRUD операции с задачами ===
+const handleAddTask = useCallback(async (taskData) => {
+  if (!selectedLesson) return
 
-    const dayIndex = schedule.findIndex(day =>
-      day.lessons.some(l => l.id === selectedLesson.id)
-    )
+  try {
+    const token = localStorage.getItem("jwt_token")
+    const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: taskData.title,
+        description: taskData.description,
+        priority: taskData.priority,
+        lessonId: selectedLesson.id,
+        lessonName: selectedLesson.name,
+        lessonTime: selectedLesson.time,
+        lessonDate: selectedLesson.date
+      }),
+    })
 
-    if (dayIndex === -1) return
-
-    if (expandedDayIndex === dayIndex) {
-      pendingScrollRef.current = dayIndex
+    if (!response.ok) {
+      throw new Error("Failed to create task")
     }
 
-    setSchedule(prev => {
-      const newSchedule = [...prev]
-      const newDay = { ...newSchedule[dayIndex] }
-      const newLessons = [...newDay.lessons]
+    const newTask = await response.json()
 
-      const lessonIndex = newLessons.findIndex(l => l.id === selectedLesson.id)
-      if (lessonIndex === -1) return prev
-
-      newLessons[lessonIndex] = {
-        ...newLessons[lessonIndex],
-        task: {
-          ...taskData,
-          id: Date.now().toString(),
-          completed: false
-        }
-      }
-
-      newDay.lessons = newLessons
-      newSchedule[dayIndex] = newDay
-      return newSchedule
-    })
+    // Обновляем локальное состояние
+    setSchedule(prev => prev.map(day => ({
+      ...day,
+      lessons: day.lessons.map(lesson =>
+        lesson.id === selectedLesson.id
+          ? { ...lesson, task: newTask }
+          : lesson
+      )
+    })))
 
     setIsAddTaskDialogOpen(false)
     setSelectedLesson(null)
-  }, [selectedLesson, schedule, expandedDayIndex])
+  } catch (error) {
+    console.error("Error creating task:", error)
+    alert("Ошибка при создании задачи")
+  }
+}, [selectedLesson])
 
-  const handleEditTask = useCallback((lesson, updatedTask) => {
-    setSchedule(prev => prev.map(day => ({
-      ...day,
-      lessons: day.lessons.map(l =>
-        l.id === lesson.id ? { ...l, task: updatedTask } : l
-      )
-    })))
-  }, [])
+  const handleEditTask = useCallback(async (lesson, updatedTask) => {
+    try {
+      const token = localStorage.getItem("jwt_token")
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${updatedTask.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedTask),
+      })
 
-  const handleDeleteTask = useCallback((lesson) => {
-    setSchedule(prev => prev.map(day => ({
-      ...day,
-      lessons: day.lessons.map(l =>
-        l.id === lesson.id ? { ...l, task: null } : l
-      )
-    })))
-    setIsTaskPopupOpen(false)
-    setSelectedLesson(null)
-    setSelectedTask(null)
-  }, [])
+      if (!response.ok) {
+        throw new Error("Failed to update task")
+      }
 
-  const handleToggleTaskComplete = useCallback((lessonId) => {
-    setSchedule(prev => prev.map(day => ({
-      ...day,
-      lessons: day.lessons.map(l =>
-        l.id === lessonId && l.task
-          ? { ...l, task: { ...l.task, completed: !l.task.completed } }
-          : l
-      )
-    })))
+      const savedTask = await response.json()
 
-    if (selectedTask && selectedLesson?.id === lessonId) {
-      setSelectedTask(prev => ({ ...prev, completed: !prev.completed }))
+      // Обновляем локальное состояние
+      setSchedule(prev => prev.map(day => ({
+        ...day,
+        lessons: day.lessons.map(l =>
+          l.id === lesson.id ? { ...l, task: savedTask } : l
+        )
+      })))
+
+      // Обновляем выбранную задачу если она открыта
+      if (selectedTask && selectedTask.id === updatedTask.id) {
+        setSelectedTask(savedTask)
+      }
+    } catch (error) {
+      console.error("Error updating task:", error)
+      alert("Ошибка при обновлении задачи")
     }
-  }, [selectedLesson, selectedTask])
+  }, [selectedTask])
+
+  const handleDeleteTask = useCallback(async (lesson) => {
+    if (!lesson.task) return
+
+    try {
+      const token = localStorage.getItem("jwt_token")
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${lesson.task.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete task")
+      }
+
+      // Обновляем локальное состояние
+      setSchedule(prev => prev.map(day => ({
+        ...day,
+        lessons: day.lessons.map(l =>
+          l.id === lesson.id ? { ...l, task: null } : l
+        )
+      })))
+
+      setIsTaskPopupOpen(false)
+      setSelectedLesson(null)
+      setSelectedTask(null)
+    } catch (error) {
+      console.error("Error deleting task:", error)
+      alert("Ошибка при удалении задачи")
+    }
+  }, [])
+
+  const handleToggleTaskComplete = useCallback(async (lessonId) => {
+    const lesson = schedule
+      .flatMap(day => day.lessons)
+      .find(l => l.id === lessonId)
+
+    if (!lesson || !lesson.task) return
+
+    try {
+      const token = localStorage.getItem("jwt_token")
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${lesson.task.id}/toggle-complete`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to toggle task completion")
+      }
+
+      const updatedTask = await response.json()
+
+      // Обновляем локальное состояние
+      setSchedule(prev => prev.map(day => ({
+        ...day,
+        lessons: day.lessons.map(l =>
+          l.id === lessonId && l.task
+            ? { ...l, task: updatedTask }
+            : l
+        )
+      })))
+
+      if (selectedTask && selectedLesson?.id === lessonId) {
+        setSelectedTask(updatedTask)
+      }
+    } catch (error) {
+      console.error("Error toggling task completion:", error)
+      alert("Ошибка при изменении статуса задачи")
+    }
+  }, [schedule, selectedLesson, selectedTask])
 
   // === Курсор grab ===
   useEffect(() => {
