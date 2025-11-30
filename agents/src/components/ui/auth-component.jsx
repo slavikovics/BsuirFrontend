@@ -1,5 +1,5 @@
 // auth-component.jsx
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "./button"
 import {
   DropdownMenu,
@@ -23,12 +23,140 @@ import { SettingsDialog } from "./settings-dialog"
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8081"
 
+// Utility function to check if token is expired or about to expire
+const isTokenExpiredOrExpiring = (token) => {
+  if (!token) return true;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+    
+    return now >= (exp - bufferTime);
+  } catch (error) {
+    console.error("Error parsing token:", error);
+    return true;
+  }
+};
+
+// Store original fetch for auth endpoints
+const originalFetch = window.fetch.bind(window);
+
+// Enhanced fetch function with automatic token refresh
+const authFetch = async (url, options = {}) => {
+  let token = localStorage.getItem("jwt_token");
+  
+  // Check if token needs refresh (skip for auth endpoints)
+  if (token && !url.includes('/api/auth/') && isTokenExpiredOrExpiring(token)) {
+    try {
+      console.log("Token expired or expiring, attempting refresh...");
+      await refreshToken();
+      token = localStorage.getItem("jwt_token"); // Get new token
+    } catch (error) {
+      console.error("Failed to refresh token:", error);
+      throw new Error("Authentication required");
+    }
+  }
+
+  const headers = {
+    ...options.headers,
+    "Content-Type": "application/json",
+  };
+
+  // Add Authorization header for non-auth endpoints
+  if (token && !url.includes('/api/auth/')) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await originalFetch(url, {
+    ...options,
+    headers,
+  });
+
+  // If token is invalid, try to refresh and retry once (skip for auth endpoints)
+  if (response.status === 401 && token && !url.includes('/api/auth/')) {
+    try {
+      console.log("Received 401, attempting token refresh...");
+      await refreshToken();
+      const newToken = localStorage.getItem("jwt_token");
+      
+      // Retry the request with new token
+      headers["Authorization"] = `Bearer ${newToken}`;
+      return await originalFetch(url, {
+        ...options,
+        headers,
+      });
+    } catch (refreshError) {
+      console.error("Refresh failed after 401:", refreshError);
+      handleLogout();
+      throw new Error("Authentication failed");
+    }
+  }
+
+  return response;
+};
+
+// Refresh token function
+const refreshToken = async () => {
+  const token = localStorage.getItem("jwt_token");
+  if (!token) {
+    throw new Error("No token available");
+  }
+
+  try {
+    const response = await originalFetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Refresh failed: ${response.status}`);
+    }
+
+    const authData = await response.json();
+    
+    if (authData.token) {
+      localStorage.setItem("jwt_token", authData.token);
+    }
+    if (authData.user) {
+      localStorage.setItem("user_data", JSON.stringify(authData.user));
+    }
+
+    return authData;
+  } catch (error) {
+    console.error("Token refresh failed:", error);
+    // If refresh fails, clear storage
+    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("user_data");
+    throw error;
+  }
+};
+
+// Logout function
+const handleLogout = () => {
+  // Try to call logout endpoint, but don't block if it fails
+  originalFetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: "POST",
+  }).catch((error) => {
+    console.error("Error during logout:", error);
+  });
+
+  localStorage.removeItem("jwt_token");
+  localStorage.removeItem("user_data");
+  console.log("User logged out");
+};
+
 export function AuthComponent() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   useEffect(() => {
     const handleOpenSettings = () => {
@@ -42,21 +170,21 @@ export function AuthComponent() {
     }
   }, [])
 
-  // Отправка ID token (credential) на бэкенд для верификации и получения JWT
+  // Enhanced authenticate function
   const authenticateWithBackend = async (idToken) => {
     try {
       setIsLoading(true)
-      console.log("Отправка ID token на бэкенд:", idToken)
+      console.log("Sending ID token to backend:", idToken)
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+      const response = await originalFetch(`${API_BASE_URL}/api/auth/google`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token: idToken }), // backend ожидает поле "token"
+        body: JSON.stringify({ token: idToken }),
       })
 
-      console.log("Ответ от бэкенда:", response)
+      console.log("Backend response:", response)
 
       if (!response.ok) {
         let errorData
@@ -69,9 +197,8 @@ export function AuthComponent() {
       }
 
       const authData = await response.json()
-      console.log("Успешная аутентификация через бэкенд:", authData)
+      console.log("Successful authentication:", authData)
 
-      // backend должен вернуть { token: "<jwt>", user: { ... } }
       if (authData.token) {
         localStorage.setItem("jwt_token", authData.token)
       }
@@ -96,112 +223,119 @@ export function AuthComponent() {
     localStorage.setItem("user_data", JSON.stringify(updatedUser))
   }
 
-  // Проверка статус-аутентификации при загрузке компонента
-  const checkAuthStatus = async () => {
+  // Enhanced auth status check
+  const checkAuthStatus = useCallback(async () => {
     const token = localStorage.getItem("jwt_token")
     const savedUser = localStorage.getItem("user_data")
 
     if (token && savedUser) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/users/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+      // Check if token is expired
+      if (isTokenExpiredOrExpiring(token)) {
+        console.log("Token needs refresh on app load");
+        try {
+          await refreshToken();
+          // After refresh, get the updated user data
+          const refreshedUser = localStorage.getItem("user_data");
+          if (refreshedUser) {
+            setUser(JSON.parse(refreshedUser));
+            setProfile(JSON.parse(refreshedUser));
+          }
+          setIsCheckingAuth(false);
+          return;
+        } catch (error) {
+          console.error("Token refresh failed on app load:", error);
+          setIsCheckingAuth(false);
+          return;
+        }
+      }
 
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/users/me`)
+        
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
           setProfile(userData)
+          localStorage.setItem("user_data", JSON.stringify(userData))
         } else {
-          // Токен невалиден, очищаем localStorage
-          handleLogout()
+          // If we have saved user data but API call fails, still show the user
+          // but mark as potentially stale
+          const savedUserData = JSON.parse(savedUser);
+          setUser(savedUserData);
+          setProfile(savedUserData);
+          console.warn("API call failed, using cached user data");
         }
       } catch (error) {
         console.error("Error checking auth status:", error)
-        handleLogout()
+        // Even if API call fails, try to use saved user data
+        const savedUserData = JSON.parse(savedUser);
+        setUser(savedUserData);
+        setProfile(savedUserData);
       }
     }
-  }
-
-  // Опционально: получить профиль напрямую у Google (если нужно)
-  const getUserInfo = async (accessToken) => {
-    try {
-      const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to get user info from Google")
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error("Error getting user info:", error)
-      throw error
-    }
-  }
-
-  // Логаут
-  const handleLogout = () => {
-    fetch(`${API_BASE_URL}/api/auth/logout`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("jwt_token")}`,
-      },
-    }).catch((error) => {
-      console.error("Error during logout:", error)
-    })
-
-    localStorage.removeItem("jwt_token")
-    localStorage.removeItem("user_data")
-    setUser(null)
-    setProfile(null)
-    console.log("Пользователь вышел из системы")
-  }
-
-  const getAuthToken = () => {
-    return localStorage.getItem("jwt_token")
-  }
-
-  useEffect(() => {
-    checkAuthStatus()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setIsCheckingAuth(false);
   }, [])
 
-  // Оборачиваем fetch для автоматической подстановки JWT в заголовки
+  // Component-specific logout function
+  const handleComponentLogout = () => {
+    handleLogout();
+    setUser(null);
+    setProfile(null);
+  }
+
+  // Periodic token check (every hour)
   useEffect(() => {
-    const originalFetch = window.fetch
-    window.fetch = function (...args) {
-      const [url, options = {}] = args
+    const interval = setInterval(() => {
+      const token = localStorage.getItem("jwt_token");
+      if (token && isTokenExpiredOrExpiring(token)) {
+        console.log("Periodic token check: token needs refresh");
+        refreshToken().catch(error => {
+          console.error("Periodic token refresh failed:", error);
+        });
+      }
+    }, 60 * 60 * 1000); // Check every hour
 
-      if (
-        typeof url === "string" &&
-        url.includes(API_BASE_URL) &&
-        !url.includes("/api/auth/") &&
-        getAuthToken()
-      ) {
-        const newOptions = {
-          ...options,
-          headers: {
-            ...options.headers,
-            Authorization: `Bearer ${getAuthToken()}`,
-          },
-        }
+    return () => clearInterval(interval);
+  }, []);
 
-        return originalFetch(url, newOptions)
+  // Global fetch interceptor for all API calls except auth
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    
+    window.fetch = async function (...args) {
+      const [url, options = {}] = args;
+
+      // Only intercept calls to our API that are NOT auth endpoints
+      if (typeof url === "string" && 
+          url.includes(API_BASE_URL) && 
+          !url.includes('/api/auth/')) {
+        return authFetch(url, options);
       }
 
-      return originalFetch(...args)
-    }
+      // For all other calls (including auth endpoints), use original fetch
+      return originalFetch(url, options);
+    };
 
     return () => {
-      window.fetch = originalFetch
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+      window.fetch = originalFetch;
+    };
+  }, []);
+
+  // Load auth status on component mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  // Show loading state while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="flex items-center space-x-2">
+        <Button variant="ghost" disabled>
+          Загрузка...
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center space-x-2">
@@ -239,7 +373,7 @@ export function AuthComponent() {
               <span>Настройки</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleComponentLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Выйти</span>
             </DropdownMenuItem>
@@ -259,7 +393,6 @@ export function AuthComponent() {
               </DialogHeader>
 
               <div className="grid gap-4 py-4">
-                {/* GoogleLogin из @react-oauth/google возвращает credential (ID token) */}
                 <GoogleLogin
                   onSuccess={async (credentialResponse) => {
                     try {
@@ -269,11 +402,10 @@ export function AuthComponent() {
                         throw new Error("No credential returned from Google")
                       }
 
-                      // Отправляем ID token (credential) на бэкенд
                       await authenticateWithBackend(idToken)
                       setIsLoginDialogOpen(false)
                     } catch (err) {
-                      console.error("Ошибка аутентификации с бэкендом:", err)
+                      console.error("Authentication error:", err)
                       alert(`Ошибка при входе: ${err.message}`)
                     } finally {
                       setIsLoading(false)
@@ -282,7 +414,6 @@ export function AuthComponent() {
                   onError={() => {
                     alert("Ошибка при входе через Google. Проверьте консоль для деталей.")
                   }}
-                  // render the default Google button; if you want a custom UI, use render prop or your own button + google.accounts.id API
                 />
 
                 <div className="text-center">
@@ -305,25 +436,66 @@ export function AuthComponent() {
   )
 }
 
-// Хук для использования аутентификации в других компонентах
+// Enhanced auth hook
 export function useAuth() {
   const [user, setUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem("jwt_token")
-    const savedUser = localStorage.getItem("user_data")
+    const checkAuth = async () => {
+      const token = localStorage.getItem("jwt_token")
+      const savedUser = localStorage.getItem("user_data")
 
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser))
+      if (token && savedUser) {
+        // Check if token is valid
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const exp = payload.exp * 1000;
+          if (Date.now() < exp) {
+            setUser(JSON.parse(savedUser))
+          } else {
+            // Token expired, try to refresh
+            try {
+              await refreshToken();
+              const refreshedUser = localStorage.getItem("user_data");
+              if (refreshedUser) {
+                setUser(JSON.parse(refreshedUser));
+              }
+            } catch (error) {
+              console.error("Token refresh failed in useAuth:", error);
+              // Clear invalid data
+              localStorage.removeItem("jwt_token")
+              localStorage.removeItem("user_data")
+            }
+          }
+        } catch {
+          // Invalid token, clear storage
+          localStorage.removeItem("jwt_token")
+          localStorage.removeItem("user_data")
+        }
+      }
+      setIsLoading(false)
     }
+
+    checkAuth()
   }, [])
 
   const isAuthenticated = !!user
-  const getToken = () => localStorage.getItem("jwt_token")
+  const getToken = () => {
+    const token = localStorage.getItem("jwt_token");
+    if (token && !isTokenExpiredOrExpiring(token)) {
+      return token;
+    }
+    return null;
+  }
 
   return {
     user,
     isAuthenticated,
+    isLoading,
     getToken,
   }
 }
+
+// Export authFetch for use in other components
+export { authFetch };

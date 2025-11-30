@@ -77,6 +77,57 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("refresh")]
+    public async Task<ActionResult<AuthResponseDto>> RefreshToken()
+    {
+        try
+        {
+            // Get token from Authorization header
+            var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            {
+                return Unauthorized(new { message = "Invalid authorization header" });
+            }
+
+            var token = authHeader.Substring("Bearer ".Length).Trim();
+            
+            // Validate and refresh token
+            var user = await _tokenService.ValidateAndRefreshTokenAsync(token);
+            if (user == null)
+            {
+                return Unauthorized(new { message = "Invalid or expired token" });
+            }
+
+            var newToken = await _tokenService.GenerateJwtToken(user);
+            var expiresAt = DateTime.UtcNow.AddDays(7);
+
+            var response = new AuthResponseDto
+            {
+                Token = newToken,
+                User = new UserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    PictureUrl = user.PictureUrl,
+                    Locale = user.Locale,
+                    GroupNumber = user.GroupNumber,
+                    CreatedAt = user.CreatedAt
+                },
+                ExpiresAt = expiresAt
+            };
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during token refresh");
+            return StatusCode(500, new { message = "Internal server error" });
+        }
+    }
+
     [HttpPost("logout")]
     public IActionResult Logout()
     {
