@@ -12,27 +12,28 @@ export const TaskBadge = ({ task, onClick }) => {
     }
   };
 
-  return (
-    <div
-      className={`p-1.5 border rounded cursor-pointer hover:shadow-sm transition-all ${getPriorityColor(task.priority)} ${
-        task.completed ? 'opacity-60 line-through' : ''
-      }`}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="text-xs font-medium truncate">
-              {task.title}
-            </h4>
-            {task.completed && (
-              <span className="text-[10px] text-green-600 bg-green-100 px-1 rounded flex-shrink-0">
-                выполнено
-              </span>
-            )}
-          </div>
+return (
+  <div
+    className={`p-1.5 border rounded cursor-pointer hover:shadow-sm transition-all ${getPriorityColor(task.priority)} ${
+      task.completed ? 'opacity-60' : ''
+    }`}
+    onClick={onClick}
+  >
+    <div className="flex items-center gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4 className={`text-xs font-medium truncate ${
+            task.completed ? 'line-through' : ''
+          }`}>
+            {task.title}
+          </h4>
+          {task.completed && (
+            <span className="text-[10px] text-green-600 bg-green-100 px-1 rounded flex-shrink-0">
+              выполнено
+            </span>
+          )}
         </div>
       </div>
     </div>
-  );
-};
+  </div>
+);}

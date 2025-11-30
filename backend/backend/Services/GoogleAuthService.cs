@@ -25,13 +25,24 @@ public class GoogleAuthService : IGoogleAuthService
                 _googleClientId = await _keyVaultService.GetGoogleClientIdAsync();
             }
 
-            var settings = new GoogleJsonWebSignature.ValidationSettings()
-            {
-                Audience = new[] { _googleClientId }
-            };
+            var validationTask = GoogleJsonWebSignature.ValidateAsync(token);
 
-            var payload = await GoogleJsonWebSignature.ValidateAsync(token, settings);
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var completedTask = await Task.WhenAny(validationTask, timeoutTask);
+
+            if (completedTask == timeoutTask)
+            {
+                _logger.LogError("Google token validation timed out after 5 seconds");
+                return null;
+            }
+
+            var payload = await validationTask;
             return payload;
+        }
+        catch (InvalidJwtException ex)
+        {
+            _logger.LogWarning(ex, "Invalid Google token");
+            return null;
         }
         catch (Exception ex)
         {
