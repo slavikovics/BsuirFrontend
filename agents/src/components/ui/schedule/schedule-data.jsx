@@ -11,124 +11,113 @@ const TYPE_MAP = {
   'Зачет': 'EXAM',
 };
 
-export const fetchScheduleData = async (groupNumber) => { // ← ДОБАВЛЯЕМ ПАРАМЕТР
+// Функция для вычисления номера недели в цикле 1-4
+const calculateWeekNumber = (date, semesterStart) => {
+  const timeDiff = date.getTime() - semesterStart.getTime();
+  const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+  return (Math.floor(daysDiff / 7) % 4) + 1;
+};
+
+// Функция для проверки, попадает ли дата в период занятия
+const isDateInLessonRange = (date, startDateStr, endDateStr) => {
+  if (!startDateStr || !endDateStr) return true;
+  
+  const [sDay, sMonth, sYear] = startDateStr.split('.').map(Number);
+  const lessonStart = new Date(sYear, sMonth - 1, sDay);
+  const [eDay, eMonth, eYear] = endDateStr.split('.').map(Number);
+  const lessonEnd = new Date(eYear, eMonth - 1, eDay);
+  
+  return date >= lessonStart && date <= lessonEnd;
+};
+
+// Функция для проверки соответствия недели
+const isWeekMatching = (weekNum, lessonWeekNumbers) => {
+  if (!lessonWeekNumbers || lessonWeekNumbers.length === 0) return true;
+  return lessonWeekNumbers.includes(weekNum);
+};
+
+export const fetchScheduleData = async (groupNumber) => {
   if (!groupNumber) {
-    return []; // ← ВОЗВРАЩАЕМ ПУСТОЙ МАССИВ ЕСЛИ ГРУППА НЕ УКАЗАНА
+    return [];
   }
 
   try {
-    const currentWeekRes = await fetch('https://iis.bsuir.by/api/v1/schedule/current-week');
-    if (!currentWeekRes.ok) throw new Error('Failed to fetch current week');
-    const currentWeek = await currentWeekRes.json();
-
-    const scheduleRes = await fetch(`https://iis.bsuir.by/api/v1/schedule?studentGroup=${groupNumber}`); // ← ИСПОЛЬЗУЕМ groupNumber
+    const scheduleRes = await fetch(`https://iis.bsuir.by/api/v1/schedule?studentGroup=${groupNumber}`);
     if (!scheduleRes.ok) throw new Error('Failed to fetch schedule');
     const data = await scheduleRes.json();
 
+    // Определяем период отображения (от текущей даты до конца семестра)
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
     const [startDay, startMonth, startYear] = data.startDate.split('.').map(Number);
     const semesterStart = new Date(startYear, startMonth - 1, startDay);
+    semesterStart.setHours(0, 0, 0, 0);
 
     const [endDay, endMonth, endYear] = data.endDate.split('.').map(Number);
     const semesterEnd = new Date(endYear, endMonth - 1, endDay);
+    semesterEnd.setHours(23, 59, 59, 999);
 
-    const currentDate = new Date()
+    // Начинаем с текущей даты или с начала семестра
+    const startDate = currentDate < semesterStart ? semesterStart : currentDate;
 
     const schedule = [];
 
-    for (let i = 0; i < 120; i++) {
-      const date = new Date(currentDate.getTime() + i * 24 * 60 * 60 * 1000);
+    // Проходим по всем дням от startDate до конца семестра
+    for (let date = new Date(startDate); date <= semesterEnd; date.setDate(date.getDate() + 1)) {
+      date.setHours(0, 0, 0, 0);
+      
       const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
       const dayName = DAYS_OF_WEEK[dayIndex];
       const formattedDate = date.toLocaleDateString('ru-RU');
-
-      const daysFromStart = Math.floor((date - semesterStart) / (24 * 60 * 60 * 1000));
-      const weekNum = Math.max(1, (Math.floor(daysFromStart / 7) % 4) + 1);
-
-      const isWithinSemester = date >= semesterStart && date <= semesterEnd;
-
+      
+      const weekNum = calculateWeekNumber(date, semesterStart);
+      
       let lessons = [];
 
-      if (isWithinSemester && data.schedules[dayName]) {
-        lessons = data.schedules[dayName]
-          .filter(lesson => {
-            if (lesson.weekNumber && !lesson.weekNumber.includes(weekNum)) return false;
-
-            if (lesson.startLessonDate && lesson.endLessonDate) {
-              const [sDay, sMonth, sYear] = lesson.startLessonDate.split('.').map(Number);
-              const lessonStart = new Date(sYear, sMonth - 1, sDay);
-              const [eDay, eMonth, eYear] = lesson.endLessonDate.split('.').map(Number);
-              const lessonEnd = new Date(eYear, eMonth - 1, eDay);
-              if (date < lessonStart || date > lessonEnd) return false;
+      // Обрабатываем регулярные занятия из schedules
+      if (data.schedules && data.schedules[dayName]) {
+        data.schedules[dayName].forEach((lesson, lessonIndex) => {
+          // Для занятий с конкретной датой
+          if (lesson.dateLesson) {
+            if (lesson.dateLesson === formattedDate) {
+              lessons.push(createLessonObject(lesson, formattedDate, lessonIndex, false));
             }
-
-            return true;
-          })
-          .map((lesson, lessonIndex) => {
-            const typeKey = TYPE_MAP[lesson.lessonTypeAbbrev] || 'CONSULTATION';
-            const teacher = lesson.employees?.[0] ? `${lesson.employees[0].lastName} ${lesson.employees[0].firstName.charAt(0)}. ${lesson.employees[0].middleName ? lesson.employees[0].middleName.charAt(0) + '.' : ''}`.trim() : 'Не указан';
-            const room = lesson.auditories?.[0] || 'Не указана';
-            const time = `${lesson.startLessonTime}-${lesson.endLessonTime}`;
-
-            let groupType = 'group';
-            let subgroup = null;
-            if (lesson.numSubgroup > 0) {
-              groupType = 'subgroup';
-              subgroup = lesson.numSubgroup;
-            }
-
-            return {
-              id: `${formattedDate}-${lessonIndex}`,
-              name: lesson.subjectFullName || lesson.subject,
-              type: typeKey,
-              teacher,
-              room,
-              time,
-              groupType,
-              subgroup,
-              task: null,
-              note: lesson.note || null
-            };
-          });
+            return;
+          }
+          
+          // Для регулярных занятий проверяем период и неделю
+          if (isDateInLessonRange(date, lesson.startLessonDate, lesson.endLessonDate) &&
+              isWeekMatching(weekNum, lesson.weekNumber)) {
+            lessons.push(createLessonObject(lesson, formattedDate, lessonIndex, false));
+          }
+        });
       }
 
-      data.exams
-        .filter(exam => exam.dateLesson === formattedDate)
-        .forEach((exam, examIndex) => {
-          const typeKey = TYPE_MAP[exam.lessonTypeAbbrev] || 'EXAM';
-          const teacher = exam.employees?.[0] ? `${exam.employees[0].lastName} ${exam.employees[0].firstName.charAt(0)}. ${exam.employees[0].middleName ? exam.employees[0].middleName.charAt(0) + '.' : ''}`.trim() : 'Не указан';
-          const room = exam.auditories?.[0] || 'Не указана';
-          const time = `${exam.startLessonTime}-${exam.endLessonTime}`;
-
-          let groupType = 'group';
-          let subgroup = null;
-          if (exam.numSubgroup > 0) {
-            groupType = 'subgroup';
-            subgroup = exam.numSubgroup;
+      // Обрабатываем экзамены
+      if (data.exams && data.exams.length > 0) {
+        data.exams.forEach((exam, examIndex) => {
+          if (exam.dateLesson === formattedDate) {
+            lessons.push(createLessonObject(exam, formattedDate, examIndex, true));
           }
-
-          lessons.push({
-            id: `${formattedDate}-exam-${examIndex}`,
-            name: exam.subjectFullName || exam.subject,
-            type: typeKey,
-            teacher,
-            room,
-            time,
-            groupType,
-            subgroup,
-            task: null,
-            note: exam.note || null,
-            isExam: true
-          });
         });
+      }
 
-      lessons.sort((a, b) => a.time.localeCompare(b.time));
+      // Сортируем занятия по времени начала
+      lessons.sort((a, b) => {
+        if (!a.startTime || !b.startTime) return 0;
+        return a.startTime.localeCompare(b.startTime);
+      });
 
+      // ВАЖНО: Добавляем ВСЕ дни, даже если нет занятий
       schedule.push({
-        id: i + 1,
+        id: `${formattedDate}-${dayName}`,
         name: dayName,
         date: formattedDate,
         fullDate: new Date(date),
-        lessons
+        lessons,
+        // Добавляем признак пустого дня для удобства
+        isEmpty: lessons.length === 0
       });
     }
 
@@ -137,4 +126,60 @@ export const fetchScheduleData = async (groupNumber) => { // ← ДОБАВЛЯ�
     console.error('Error fetching schedule:', error);
     return [];
   }
+};
+
+// Вспомогательная функция для создания объекта занятия
+const createLessonObject = (lesson, formattedDate, index, isExam) => {
+  const typeKey = TYPE_MAP[lesson.lessonTypeAbbrev] || (isExam ? 'EXAM' : 'OTHER');
+  
+  const teacher = lesson.employees && lesson.employees.length > 0 
+    ? formatTeacherName(lesson.employees[0])
+    : 'Не указан';
+    
+  const room = lesson.auditories && lesson.auditories.length > 0 
+    ? lesson.auditories[0] 
+    : 'Не указана';
+    
+  const time = lesson.startLessonTime && lesson.endLessonTime 
+    ? `${lesson.startLessonTime}-${lesson.endLessonTime}`
+    : 'Время не указано';
+
+  let groupType = 'group';
+  let subgroup = null;
+  if (lesson.numSubgroup > 0) {
+    groupType = 'subgroup';
+    subgroup = lesson.numSubgroup;
+  }
+
+  // Создаем стабильный ID для занятия (без случайных значений)
+  const lessonId = `${formattedDate}-${isExam ? 'exam' : 'lesson'}-${index}${subgroup ? `-subgroup-${subgroup}` : ''}`;
+
+  return {
+    id: lessonId,
+    name: lesson.subjectFullName || lesson.subject || (isExam ? 'Экзамен' : 'Занятие'),
+    type: typeKey,
+    teacher,
+    room,
+    time,
+    startTime: lesson.startLessonTime || '',
+    endTime: lesson.endLessonTime || '',
+    groupType,
+    subgroup,
+    task: null,
+    note: lesson.note || null,
+    isExam
+  };
+};
+
+// Функция для форматирования имени преподавателя
+const formatTeacherName = (employee) => {
+  if (!employee) return 'Не указан';
+  
+  const parts = [
+    employee.lastName,
+    employee.firstName ? `${employee.firstName.charAt(0)}.` : '',
+    employee.middleName ? `${employee.middleName.charAt(0)}.` : ''
+  ];
+  
+  return parts.filter(part => part).join(' ').trim();
 };
