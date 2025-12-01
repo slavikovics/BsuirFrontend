@@ -1,29 +1,29 @@
 // components/info/info-section.jsx
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../card";
-import { BookOpen, Users, Target, Code } from "lucide-react";
+import { Cpu, Network, Brain, Zap } from "lucide-react";
 
 export const InfoSection = () => {
   const features = [
     {
-      icon: BookOpen,
-      title: "Умное расписание",
-      description: "Интеллектуальное управление занятиями и задачами с автоматическим планированием"
+      icon: Cpu,
+      title: "AI-агенты",
+      description: "Специализированные агенты для расписания, задач и поиска информации"
     },
     {
-      icon: Users,
-      title: "Персонализация",
-      description: "Адаптация под ваши учебные потребности и предпочтения"
+      icon: Network,
+      title: "Микросервисы",
+      description: "Архитектура на независимых сервисах для надежности и масштабирования"
     },
     {
-      icon: Target,
-      title: "RAG-технологии",
-      description: "Продвинутый поиск и анализ информации с использованием Retrieval-Augmented Generation"
+      icon: Brain,
+      title: "RAG-система",
+      description: "Точные ответы на основе ваших учебных материалов и расписания"
     },
     {
-      icon: Code,
-      title: "Современный стек",
-      description: "Построено на современных технологиях для максимальной производительности"
+      icon: Zap,
+      title: "Быстрый отклик",
+      description: "Оптимизированная работа с локальными данными и кэшированием"
     }
   ];
 
@@ -32,37 +32,11 @@ export const InfoSection = () => {
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Заголовок */}
         <div className="text-center space-y-4">
-          <h1 className="text-3xl font-bold">Интеллектуальный ассистент по университету</h1>
+          <h1 className="text-3xl font-bold">Интеллектуальный ассистент по универиситету</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Современная платформа для управления учебным процессом, объединяющая расписание, 
-            базу знаний и интеллектуальный помощник
+            Платформа с ИИ-агентами для управления учебным процессом
           </p>
         </div>
-
-        {/* Основная информация */}
-        <Card>
-          <CardHeader>
-            <CardTitle>О проекте</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p>
-              Этот проект представляет собой комплексное решение для студентов и преподавателей, 
-              объединяющее в себе функции управления расписанием, хранения учебных материалов 
-              и интеллектуального ассистента на основе RAG-технологий.
-            </p>
-            
-            <p>
-              <strong>Основные возможности:</strong>
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-              <li>Интеллектуальное расписание с управлением задачами</li>
-              <li>База знаний с поддержкой различных форматов файлов</li>
-              <li>RAG-чат для получения контекстных ответов</li>
-              <li>Адаптивный интерфейс для всех устройств</li>
-              <li>Локальное хранение данных для конфиденциальности</li>
-            </ul>
-          </CardContent>
-        </Card>
 
         {/* Особенности */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -89,25 +63,25 @@ export const InfoSection = () => {
         {/* Технологии */}
         <Card>
           <CardHeader>
-            <CardTitle>Технологический стек</CardTitle>
+            <CardTitle>Технологии</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className="text-center p-3 bg-muted rounded-lg">
                 <div className="font-medium">Frontend</div>
-                <div className="text-muted-foreground">React + Tailwind</div>
+                <div className="text-muted-foreground">React</div>
               </div>
               <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="font-medium">UI Components</div>
-                <div className="text-muted-foreground">shadcn/ui</div>
+                <div className="font-medium">Архитектура</div>
+                <div className="text-muted-foreground">Микросервисы</div>
               </div>
               <div className="text-center p-3 bg-muted rounded-lg">
                 <div className="font-medium">AI</div>
-                <div className="text-muted-foreground">RAG Architecture</div>
+                <div className="text-muted-foreground">RAG + Агенты</div>
               </div>
               <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="font-medium">Storage</div>
-                <div className="text-muted-foreground">LocalStorage</div>
+                <div className="font-medium">API</div>
+                <div className="text-muted-foreground">REST</div>
               </div>
             </div>
           </CardContent>

@@ -7,7 +7,7 @@ import { TaskPopup } from "./task-popup"
 import { useSchedule } from "./use-schedule"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select"
 import { useAuth } from "../auth-component"
-import { Settings } from "lucide-react" // ← ДОБАВЛЯЕМ ИКОНКУ НАСТРОЕК
+import { ScheduleAnalysis } from "./schedule-analysis" // ← ДОБАВЛЯЕМ КОМПОНЕНТ АНАЛИЗА
 
 export const Schedule = () => {
   const { user } = useAuth()
@@ -23,6 +23,8 @@ export const Schedule = () => {
     selectedLesson,
     selectedTask,
     scrollContainerRef,
+    analysisData, // ← ДОБАВЛЯЕМ ДАННЫЕ АНАЛИЗА
+    isAnalysisLoading, // ← ДОБАВЛЯЕМ СОСТОЯНИЕ ЗАГРУЗКИ
     setIsAddTaskDialogOpen,
     setIsTaskPopupOpen,
     handleDayClick,
@@ -39,7 +41,8 @@ export const Schedule = () => {
     nextDay,
     prevDay,
     subgroupFilter,
-    setSubgroupFilter
+    setSubgroupFilter,
+    runScheduleAnalysis // ← ДОБАВЛЯЕМ ФУНКЦИЮ ЗАПУСКА АНАЛИЗА
   } = useSchedule(groupNumber)
 
   // Если пользователь не указал группу - показываем обычный текст
@@ -107,6 +110,16 @@ export const Schedule = () => {
             </SelectContent>
           </Select>
 
+          {/* Кнопка анализа расписания */}
+          <Button 
+            onClick={runScheduleAnalysis}
+            disabled={isAnalysisLoading}
+            variant="outline"
+            className="h-9"
+          >
+            {isAnalysisLoading ? "Анализ..." : "Проанализировать расписание"}
+          </Button>
+
           {/* Стрелки */}
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="icon" onClick={prevDay} className="h-8 w-8">
@@ -130,6 +143,12 @@ export const Schedule = () => {
         onMouseLeave={handleMouseLeave}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
+      />
+
+      {/* КОМПОНЕНТ АНАЛИЗА РАСПИСАНИЯ */}
+      <ScheduleAnalysis 
+        data={analysisData}
+        isLoading={isAnalysisLoading}
       />
 
       <div className="text-center mt-4">

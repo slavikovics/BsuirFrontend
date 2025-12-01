@@ -27,6 +27,9 @@ export const useSchedule = (groupNumber) => {
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
 
+  const [analysisData, setAnalysisData] = useState(null);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+
   const scrollContainerRef = useRef(null)
   const pendingScrollRef = useRef(null)
   const initialLoadRef = useRef(true)
@@ -386,6 +389,33 @@ const handleAddTask = useCallback(async (taskData) => {
     }
   }, [])
 
+  // === Анализ расписания - только GET с Bearer токеном ===
+  const runScheduleAnalysis = async () => {
+    setIsAnalysisLoading(true);
+    try {
+      const token = localStorage.getItem("jwt_token");
+      const response = await fetch(`${API_BASE_URL}/api/scheduleanalysis`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const analysis = await response.json();
+        setAnalysisData(analysis);
+      } else {
+        console.error('Ошибка при анализе расписания:', response.statusText);
+        // Можно добавить уведомление для пользователя
+      }
+    } catch (error) {
+      console.error('Ошибка при анализе расписания:', error);
+    } finally {
+      setIsAnalysisLoading(false);
+    }
+  };
+
   return {
     schedule: filteredSchedule,
     loading,
@@ -413,6 +443,9 @@ const handleAddTask = useCallback(async (taskData) => {
     prevDay,
     LESSON_TYPES,
     subgroupFilter,
-    setSubgroupFilter
+    setSubgroupFilter,
+    analysisData,
+    isAnalysisLoading,
+    runScheduleAnalysis
   }
 }

@@ -6,4 +6,8 @@ public interface IKeyVaultService
     Task<string> GetGoogleClientIdAsync();
     Task<string> GetJwtIssuerAsync();
     Task<string> GetJwtAudienceAsync();
+    
+    Task<string> GetOpenRouterApiKeyAsync();
+    Task<string> GetOpenRouterModelAsync();
+    Task<string> GetOpenRouterAppUrlAsync();
 }

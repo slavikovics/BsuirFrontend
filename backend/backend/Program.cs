@@ -41,6 +41,9 @@ namespace backend
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
             builder.Services.AddScoped<ITaskService, TaskService>();
+            builder.Services.AddScoped<IKeyVaultService, EnvironmentKeyVaultService>();
+            builder.Services.AddScoped<IScheduleAnalysisService, ScheduleAnalysisService>();
+            builder.Services.AddHttpClient<IOpenRouterService, OpenRouterService>();
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>

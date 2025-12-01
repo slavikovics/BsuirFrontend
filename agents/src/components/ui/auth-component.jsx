@@ -394,27 +394,30 @@ export function AuthComponent() {
 
               <div className="grid gap-4 py-4">
                 <GoogleLogin
-                  onSuccess={async (credentialResponse) => {
-                    try {
-                      setIsLoading(true)
-                      const idToken = credentialResponse?.credential
-                      if (!idToken) {
-                        throw new Error("No credential returned from Google")
-                      }
+  onSuccess={async (credentialResponse) => {
+    try {
+      setIsLoading(true)
+      const idToken = credentialResponse?.credential
+      if (!idToken) {
+        throw new Error("No credential returned from Google")
+      }
 
-                      await authenticateWithBackend(idToken)
-                      setIsLoginDialogOpen(false)
-                    } catch (err) {
-                      console.error("Authentication error:", err)
-                      alert(`Ошибка при входе: ${err.message}`)
-                    } finally {
-                      setIsLoading(false)
-                    }
-                  }}
-                  onError={() => {
-                    alert("Ошибка при входе через Google. Проверьте консоль для деталей.")
-                  }}
-                />
+      await authenticateWithBackend(idToken)
+      setIsLoginDialogOpen(false)
+      
+      // Перезагрузка страницы после успешного входа
+      window.location.reload()
+    } catch (err) {
+      console.error("Authentication error:", err)
+      alert(`Ошибка при входе: ${err.message}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }}
+  onError={() => {
+    alert("Ошибка при входе через Google. Проверьте консоль для деталей.")
+  }}
+/>
 
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">
