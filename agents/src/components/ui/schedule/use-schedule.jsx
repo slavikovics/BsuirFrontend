@@ -389,13 +389,16 @@ const handleAddTask = useCallback(async (taskData) => {
     }
   }, [])
 
-  // === Анализ расписания - только GET с Bearer токеном ===
+  useEffect(() => {
+    loadLastAnalysis();
+  }, [])
+
   const runScheduleAnalysis = async () => {
     setIsAnalysisLoading(true);
     try {
       const token = localStorage.getItem("jwt_token");
-      const response = await fetch(`${API_BASE_URL}/api/scheduleanalysis`, {
-        method: 'GET',
+      const response = await fetch(`${API_BASE_URL}/api/scheduleanalysis/regenerate`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -414,6 +417,34 @@ const handleAddTask = useCallback(async (taskData) => {
       setIsAnalysisLoading(false);
     }
   };
+
+  const loadLastAnalysis = async () => {
+  setIsAnalysisLoading(true);
+  try {
+    const token = localStorage.getItem("jwt_token");
+    const response = await fetch(`${API_BASE_URL}/api/scheduleanalysis/last`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      const analysis = await response.json();
+      setAnalysisData(analysis);
+    } else if (response.status === 404) {
+      console.log('Сохраненного анализа не найдено, будет создан новый');
+      await runScheduleAnalysis();
+    } else {
+      console.error('Ошибка при загрузке последнего анализа:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке последнего анализа:', error);
+  } finally {
+    setIsAnalysisLoading(false);
+  }
+};
 
   return {
     schedule: filteredSchedule,

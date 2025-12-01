@@ -1,7 +1,8 @@
-﻿namespace backend.DTOs;
+﻿namespace backend.Models;
 
-public class ScheduleAnalysisResponse
+public class ScheduleAnalysis
 {
+    public int Id { get; set; }
     public int UserId { get; set; }
     public string WorkloadLevel { get; set; } = "medium";
     public double EstimatedHours { get; set; }

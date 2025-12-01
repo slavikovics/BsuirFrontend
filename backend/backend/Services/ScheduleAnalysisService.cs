@@ -14,17 +14,20 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
     private readonly IOpenRouterService _openRouterService;
     private readonly ILogger<ScheduleAnalysisService> _logger;
     private readonly ITaskService _taskService;
+    private readonly IScheduleAnalysisRepository _scheduleAnalysisRepository;
 
     public ScheduleAnalysisService(
         AppDbContext context,
         IOpenRouterService openRouterService,
         ILogger<ScheduleAnalysisService> logger,
-        ITaskService taskService)
+        ITaskService taskService,
+        IScheduleAnalysisRepository scheduleAnalysisRepository)
     {
         _context = context;
         _openRouterService = openRouterService;
         _logger = logger;
         _taskService = taskService;
+        _scheduleAnalysisRepository = scheduleAnalysisRepository;
     }
 
     public async Task<ScheduleAnalysisResponse> AnalyzeUserScheduleAsync(int userId)
@@ -39,9 +42,8 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
                 Title = t.Title,
                 Description = t.Description,
                 Priority = t.Priority,
-                CreatedAt = t.CreatedAt,
                 LessonName = t.LessonName,
-                LessonTime = t.LessonTime
+                LessonDate = t.LessonDate
             }).ToList(),
             TaskStatistics = new
             {
@@ -64,6 +66,8 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
         {
             WriteIndented = true
         });
+        
+        _logger.LogInformation("LLM context: {Context}", jsonData);
 
         return """
                Ты - AI ассистент для анализа учебной нагрузки студентов. Проанализируй данные студента и предоставь оценку нагрузки и рекомендации.
@@ -74,7 +78,7 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
                Проанализируй:
                1. Общий уровень нагрузки (низкий, средний, высокий)
                2. Ориентировочное количество часов в неделю для выполнения всех задач
-               3. Подробный анализ в формате Markdown с обоснованием
+               3. Подробный анализ в формате Markdown с обоснованием и предолжениями когда выполнять какую задачу
                4. 3-5 практических рекомендаций по управлению временем
 
                Ответ предоставь в формате JSON:
@@ -95,13 +99,11 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
         {
             _logger.LogInformation("Parsing LLM response: {Response}", llmResponse);
 
-            // Пытаемся распарсить как полный ответ OpenRouter
             var jsonDocument = JsonDocument.Parse(llmResponse);
             var root = jsonDocument.RootElement;
 
             string content;
 
-            // Проверяем структуру ответа OpenRouter
             if (root.TryGetProperty("choices", out var choices) &&
                 choices.GetArrayLength() > 0)
             {
@@ -118,16 +120,12 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
             }
             else
             {
-                // Если это не структура OpenRouter, используем ответ как есть
                 content = llmResponse;
             }
 
-
-            // Извлекаем JSON из content (может быть обернут в ```json ... ```)
             var jsonContent = ExtractJsonFromContent(content);
             _logger.LogInformation("Parsing analysis response: {Content}", jsonContent);
-
-            // Парсим извлеченный JSON
+            
             var analysisJson = JsonDocument.Parse(jsonContent);
             var analysisRoot = analysisJson.RootElement;
 
@@ -176,7 +174,6 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
     {
         try
         {
-            // Просто ищем начало и конец JSON
             int startIndex = content.IndexOf('{');
             int endIndex = content.LastIndexOf('}');
         
@@ -194,5 +191,65 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
             _logger.LogError(ex, "Error extracting JSON");
             return content;
         }
+    }
+
+    public async Task<ScheduleAnalysisResponse> AnalyzeAndSaveUserScheduleAsync(int userId)
+    {
+        try
+        {
+            var analysisResponse = await AnalyzeUserScheduleAsync(userId);
+            
+            var analysisEntity = new ScheduleAnalysis
+            {
+                UserId = userId,
+                WorkloadLevel = analysisResponse.WorkloadLevel,
+                EstimatedHours = analysisResponse.EstimatedHours,
+                Analysis = analysisResponse.Analysis,
+                Recommendations = analysisResponse.Recommendations,
+                Timestamp = DateTime.UtcNow
+            };
+
+            var savedEntity = await _scheduleAnalysisRepository.CreateOrUpdateAsync(analysisEntity);
+            
+            return MapToResponse(savedEntity);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error analyzing and saving schedule for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<ScheduleAnalysisResponse?> GetLastAnalysisByUserIdAsync(int userId)
+    {
+        var entity = await _scheduleAnalysisRepository.GetByUserIdAsync(userId);
+        if (entity == null)
+            return null;
+
+        return MapToResponse(entity);
+    }
+
+    public async Task<ScheduleAnalysisResponse> RegenerateAnalysisAsync(int userId)
+    {
+        await _scheduleAnalysisRepository.DeleteByUserIdAsync(userId);
+        return await AnalyzeAndSaveUserScheduleAsync(userId);
+    }
+
+    public async Task<bool> DeleteAnalysisByUserIdAsync(int userId)
+    {
+        return await _scheduleAnalysisRepository.DeleteByUserIdAsync(userId);
+    }
+    
+    private ScheduleAnalysisResponse MapToResponse(ScheduleAnalysis entity)
+    {
+        return new ScheduleAnalysisResponse
+        {
+            UserId = entity.UserId,
+            WorkloadLevel = entity.WorkloadLevel,
+            EstimatedHours = entity.EstimatedHours,
+            Analysis = entity.Analysis,
+            Recommendations = entity.Recommendations,
+            Timestamp = entity.Timestamp
+        };
     }
 }
