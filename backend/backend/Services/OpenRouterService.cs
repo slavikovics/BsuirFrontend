@@ -44,9 +44,7 @@ public class OpenRouterService : IOpenRouterService
                         role = "user",
                         content = prompt
                     }
-                },
-                max_tokens = 2000,
-                temperature = 0.3
+                }
             };
 
             var json = JsonSerializer.Serialize(requestData);
@@ -56,23 +54,7 @@ public class OpenRouterService : IOpenRouterService
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation($"Model response: {responseContent}");
-            responseContent = responseContent.Replace("```", "");
-            responseContent = responseContent.Replace("```json", "");
-
-            var responseJson = JsonDocument.Parse(responseContent);
-
-            var choices = responseJson.RootElement.GetProperty("choices");
-            if (choices.GetArrayLength() > 0)
-            {
-                var message = choices[0].GetProperty("message");
-                var analysisText = message.GetProperty("content").GetString();
-
-                if (!string.IsNullOrEmpty(analysisText))
-                    return analysisText;
-            }
-
-            throw new Exception("Empty response from OpenRouter");
+            return responseContent;
         }
         catch (Exception ex)
         {

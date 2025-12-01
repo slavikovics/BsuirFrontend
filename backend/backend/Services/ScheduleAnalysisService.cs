@@ -134,7 +134,7 @@ public class ScheduleAnalysisService : IScheduleAnalysisService
             var response = new ScheduleAnalysisResponse
             {
                 WorkloadLevel = analysisRoot.GetProperty("workload_level").GetString() ?? "medium",
-                EstimatedHours = analysisRoot.GetProperty("estimated_hours").GetInt32(),
+                EstimatedHours = analysisRoot.GetProperty("estimated_hours").GetDouble(),
                 Analysis = analysisRoot.GetProperty("analysis").GetString() ?? "",
                 Recommendations = analysisRoot.GetProperty("recommendations")
                     .EnumerateArray()

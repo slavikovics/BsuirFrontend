@@ -1,36 +1,43 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-WORKDIR /app
-EXPOSE 8080
-
+﻿# Stage 1: Build
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
+# Copy csproj and restore
 COPY ["backend/backend.csproj", "backend/"]
 RUN dotnet restore "backend/backend.csproj"
 
+# Copy everything else and build
 COPY . .
 WORKDIR "/src/backend"
+RUN dotnet build "backend.csproj" -c Release -o /app/build
 
-RUN dotnet build "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-FROM build AS ef-tools
+# Install dotnet-ef in build stage
 RUN dotnet tool install --global dotnet-ef --version 9.0.0
 
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-COPY --from=ef-tools /root/.dotnet/tools /root/.dotnet/tools
+# Stage 2: Publish
+FROM build AS publish
+RUN dotnet publish "backend.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
+# Stage 3: Runtime
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+WORKDIR /app
+
+# Copy published app
+COPY --from=publish /app/publish .
+
+# Copy dotnet tools from build stage
+COPY --from=build /root/.dotnet/tools /root/.dotnet/tools
+
+# Add to PATH
 ENV PATH="$PATH:/root/.dotnet/tools"
 
-ENV ASPNETCORE_URLS=http://+:8080
-
+# Copy entrypoint script
 COPY backend/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Fix line endings and make executable
+RUN sed -i 's/\r$//' /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+EXPOSE 8080
+
+ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]

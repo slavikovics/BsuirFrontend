@@ -407,7 +407,6 @@ const handleAddTask = useCallback(async (taskData) => {
         setAnalysisData(analysis);
       } else {
         console.error('Ошибка при анализе расписания:', response.statusText);
-        // Можно добавить уведомление для пользователя
       }
     } catch (error) {
       console.error('Ошибка при анализе расписания:', error);
