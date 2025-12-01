@@ -145,9 +145,11 @@ const handleLogout = () => {
     console.error("Error during logout:", error);
   });
 
-  localStorage.removeItem("jwt_token");
-  localStorage.removeItem("user_data");
-  console.log("User logged out");
+  const allKeys = Object.keys(localStorage);
+  
+  allKeys.forEach(key => {
+    localStorage.removeItem(key);
+  });
 };
 
 export function AuthComponent() {

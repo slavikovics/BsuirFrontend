@@ -3,6 +3,7 @@ import { Header } from "./components/ui/header"
 import { Schedule } from './components/ui/schedule/index'
 import { KnowledgeSection } from './components/ui/knowledge'
 import { InfoSection } from './components/ui/info'
+import { Chat } from './components/ui/chat/chat'
 import { useState } from "react"
 
 function App() {
@@ -16,6 +17,8 @@ function App() {
         return <KnowledgeSection />;
       case "info":
         return <InfoSection />;
+      case "chat":
+        return <Chat />;
       default:
         return <Schedule />;
     }
