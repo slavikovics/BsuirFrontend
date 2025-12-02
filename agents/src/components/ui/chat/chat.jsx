@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { SimpleMarkdownContent } from "../fixed-markdown-content"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../tooltip"
+import { useChatAPI } from "./use-chat"
 
 // Конфигурация API
 const API_ENDPOINTS = {
@@ -24,6 +25,7 @@ const API_ENDPOINTS = {
 
 export function Chat() {
   const [mode, setMode] = useState("university")
+  const { sendMessage } = useChatAPI();
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -37,7 +39,7 @@ export function Chat() {
     llm: "llm-chat-history"
   }
 
-  // Загружаем историю при монтировании и смене режима
+
   useEffect(() => {
     const saved = localStorage.getItem(storageKeys[mode])
     if (saved) {
@@ -135,119 +137,54 @@ export function Chat() {
     }
   }
 
-  // Функция для запроса к API университета
-  const fetchUniversityAPI = async (messageText) => {
-    try {
-      const response = await fetch(API_ENDPOINTS.university, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain'
-        },
-        body: messageText
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      
-      // Извлекаем поле response из ответа
-      if (data && data.response) {
-        return data.response
-      } else {
-        return "Получен ответ в неожиданном формате"
-      }
-    } catch (error) {
-      console.error('API Error:', error)
-      throw error
-    }
-  }
-
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || isLoading) return;
 
     const userMessage = {
       id: Date.now().toString(),
       content: input,
-      role: "user",
+      role: 'user',
       timestamp: Date.now(),
       mode
-    }
+    };
 
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    saveHistory(newMessages)
-    setInput("")
-    setIsLoading(true)
+    let newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setIsMultiline(false)
+    setInput('');
+    setIsLoading(true);
 
     try {
-      let assistantResponse = ""
+      const response = await sendMessage(input, mode);
       
-      if (mode === "university") {
-        // Запрос к API университета
-        assistantResponse = await fetchUniversityAPI(input)
-      } else {
-        // Для других режимов - имитация
-        assistantResponse = await simulateAIResponse(input, mode)
-      }
-
       const assistantMessage = {
         id: (Date.now() + 1).toString(),
-        content: assistantResponse,
-        role: "assistant",
+        content: response,
+        role: 'assistant',
         timestamp: Date.now(),
         mode
-      }
+      };
 
-      const updatedMessages = [...newMessages, assistantMessage]
-      setMessages(updatedMessages)
-      saveHistory(updatedMessages)
+      setMessages([...newMessages, assistantMessage]);
+      newMessages = [...newMessages, assistantMessage];
+      saveHistory(newMessages);
+      
     } catch (error) {
-      console.error("Ошибка получения ответа:", error)
+      console.error('Error sending message:', error);
       
       const errorMessage = {
         id: (Date.now() + 1).toString(),
-        content: "Извините, произошла ошибка при обработке запроса. Пожалуйста, попробуйте еще раз.",
-        role: "assistant",
+        content: `Error: ${error.message}`,
+        role: 'assistant',
         timestamp: Date.now(),
         mode
-      }
+      };
       
-      const updatedMessages = [...newMessages, errorMessage]
-      setMessages(updatedMessages)
-      saveHistory(updatedMessages)
+      setMessages([...newMessages, errorMessage]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
-
-  // Имитация ответов для режимов files и llm
-  const simulateAIResponse = async (userMessage, mode) => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    switch (mode) {
-      case "files":
-        const fileResponses = [
-          "**Анализ документа**:\n\nВ загруженном документе я нашел информацию, которая может быть полезной:\n\n- Основные тезисы по вашей теме\n- Методические рекомендации\n- Примеры выполнения заданий",
-          "На основе анализа файлов могу сказать:\n\n1. Документ содержит структурированную информацию\n2. Все требования к оформлению соблюдены\n3. Рекомендую обратить внимание на раздел с практическими примерами",
-          "**Сводка по файлам**:\n\nВаши документы хорошо структурированы. Я выделил ключевые моменты:\n\n- Теоретическая часть: полная\n- Практическая часть: требует доработки\n- Список литературы: актуальный"
-        ]
-        return fileResponses[Math.floor(Math.random() * fileResponses.length)]
-      
-      case "llm":
-        const llmResponses = [
-          `Рассматривая ваш вопрос: "${userMessage}", могу предложить:\n\n**Решение 1**: Наиболее эффективный подход\n**Решение 2**: Альтернативный вариант\n**Решение 3**: Компромиссное решение`,
-          "**Объяснение концепции**:\n\nДанная тема включает несколько важных аспектов. Основные из них:\n\n1. Фундаментальные принципы\n2. Практическое применение\n3. Возможные проблемы и решения",
-          `Анализируя запрос, могу сказать:\n\nВопрос интересный и многогранный. Для полного понимания рекомендую:\n\n- Изучить базовые понятия\n- Рассмотреть практические примеры\n- Проанализировать кейсы применения`
-        ]
-        return llmResponses[Math.floor(Math.random() * llmResponses.length)]
-      
-      default:
-        return "Получил ваш запрос, обрабатываю..."
-    }
-  }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
