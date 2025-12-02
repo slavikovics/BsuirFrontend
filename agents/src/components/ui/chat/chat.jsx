@@ -4,6 +4,7 @@ import { Input } from "../input"
 import { ScrollArea } from "../scroll-area"
 import { Avatar, AvatarFallback } from "../avatar"
 import { Tabs, TabsList, TabsTrigger } from "../tabs"
+import { UncontrolledInput } from "./uncontrolled-input"
 import { 
   Send, 
   Bot, 
@@ -234,123 +235,130 @@ export function Chat() {
           </Tabs>
         </div>
         
-        {/* Область сообщений - КРИТИЧЕСКИ ВАЖНЫЙ CSS */}
-        <div className="flex-1 p-0 overflow-hidden">
-          <ScrollArea className="h-full p-4 md:p-6" ref={scrollAreaRef}>
-            <div className="space-y-6 max-w-4xl mx-auto">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-4 ${
-                    message.role === "user" ? "flex-row-reverse" : ""
-                  }`}
-                >
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    {message.role === "assistant" ? (
-                      <AvatarFallback className="bg-primary/10">
-                        <Bot className="h-4 w-4" />
-                      </AvatarFallback>
-                    ) : (
-                      <AvatarFallback className="bg-muted">
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  
-                  <div
-                    className={`rounded-lg px-4 py-3 max-w-[80%] ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
-                  >
-                    {message.role === "assistant" ? (
-                      <SimpleMarkdownContent 
-                        content={message.content}
-                        className="prose prose-sm max-w-none dark:prose-invert"
-                      />
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    )}
-                    
-                    <p className={`text-xs mt-2 ${
-                      message.role === "user" 
-                        ? "text-primary-foreground/70" 
-                        : "text-muted-foreground"
-                    }`}>
-                      {new Date(message.timestamp).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex gap-4">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10">
-                      <Bot className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="rounded-lg px-4 py-3 bg-muted">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">Думаю...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-
-        {/* Фиксированная панель ввода */}
-        <div className="border-t pt-4 pl-4 pr-4 bg-background">
-          <div className="flex w-full items-center gap-2 max-w-4xl mx-auto">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={clearHistory}
-                    className="h-[44px] w-[44px] flex-shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Очистить историю</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+{/* Область сообщений - КРИТИЧЕСКИ ВАЖНЫЙ CSS */}
+<div className="flex-1 p-0 overflow-hidden">
+  <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 w-full">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex gap-4 w-full ${
+            message.role === "user" ? "flex-row-reverse" : ""
+          }`}
+        >
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            {message.role === "assistant" ? (
+              <AvatarFallback className="bg-primary/10">
+                <Bot className="h-4 w-4" />
+              </AvatarFallback>
+            ) : (
+              <AvatarFallback className="bg-muted">
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            )}
+          </Avatar>
+          
+          <div
+            className={`rounded-xl px-5 py-4 w-full max-w-[75vw] ${
+              message.role === "user"
+                ? "bg-primary text-primary-foreground ml-auto"
+                : "bg-card border border-border shadow-sm"
+            }`}
+            style={{
+              width: 'fit-content',
+              maxWidth: '75vw',
+            }}
+          >
+            {message.role === "assistant" ? (
+              <SimpleMarkdownContent 
+                content={message.content}
+                className="w-full max-w-none"
+              />
+            ) : (
+              <p className="text-sm md:text-base whitespace-pre-wrap w-full max-w-none break-words">{message.content}</p>
+            )}
             
-            <div className="flex-1">
-              {isMultiline ? (
-                <textarea
-                  ref={textareaRef}
-                  placeholder={getPlaceholder()}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  disabled={isLoading}
-                  className="w-full min-h-[44px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto"
-                  rows={1}
-                  style={{ height: '44px', maxHeight: '120px' }}
-                />
-              ) : (
-                <Input
-                  placeholder={getPlaceholder()}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  disabled={isLoading}
-                  className="h-[44px]"
-                />
-              )}
+            <p className={`text-xs mt-3 ${
+              message.role === "user" 
+                ? "text-primary-foreground/70" 
+                : "text-muted-foreground"
+            }`}>
+              {new Date(message.timestamp).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
+            </p>
+          </div>
+        </div>
+      ))}
+      
+      {isLoading && (
+        <div className="flex gap-4 w-full">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary/10">
+              <Bot className="h-4 w-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div 
+            className="rounded-xl px-5 py-4 bg-card border border-border shadow-sm"
+            style={{
+              width: 'fit-content',
+              maxWidth: '50vw',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm md:text-base font-medium">Думаю...</span>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  </ScrollArea>
+</div>
+
+{/* Фиксированная панель ввода */}
+<div className="border-t w-full pt-2 bg-background">
+  <div className="flex w-full items-center gap-2 max-w-4xl mx-auto">
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={clearHistory}
+            className="h-[44px] w-[44px] flex-shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Очистить историю</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+    
+    <div className="flex-1">
+      {isMultiline ? (
+        <UncontrolledTextarea
+          placeholder={getPlaceholder()}
+          onKeyDown={handleKeyPress}
+          disabled={isLoading}
+          onSubmit={(value) => setInput(value)}
+          initialValue={input}
+        />
+      ) : (
+        <UncontrolledInput
+          placeholder={getPlaceholder()}
+          onKeyDown={handleKeyPress}
+          disabled={isLoading}
+          onSubmit={(value) => setInput(value)}
+          initialValue={input}
+        />
+      )}
+    </div>
+    
+    
             
             <Button 
   onClick={handleSend} 
