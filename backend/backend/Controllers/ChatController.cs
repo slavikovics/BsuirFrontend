@@ -14,21 +14,39 @@ public class ChatController : ControllerBase
 {
     private readonly IOpenRouterService _openRouterService;
     private readonly ILogger<ChatController> _logger;
+    private readonly IBsuirbotService _botService;
 
-    public ChatController(IOpenRouterService openRouterService, ILogger<ChatController> logger)
+    public ChatController(IOpenRouterService openRouterService, ILogger<ChatController> logger, IBsuirbotService bsuirBotService)
     {
         _openRouterService = openRouterService;
         _logger = logger;
+        _botService = bsuirBotService;
     }
 
     [HttpPost("university")]
-    public async Task<ActionResult> UniversityChat([FromBody] ChatRequestDto request)
+    public async Task<ActionResult<LlmResponseDto>> UniversityChat([FromBody] ChatRequestDto request)
     {
         var userId = GetUserId();
         if (userId == null)
             return Unauthorized();
+    
+        try
+        {
+            var inputText = request.Request;
+            var apiResponse = await _botService.GetApiResponseAsync(inputText);
         
-        throw new NotImplementedException();
+            return Ok(apiResponse);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Ошибка при вызове BsuirBot API");
+        
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                error = "Ошибка при обработке запроса",
+                details = ex.Message
+            });
+        }
     }
     
     [HttpPost("files")]

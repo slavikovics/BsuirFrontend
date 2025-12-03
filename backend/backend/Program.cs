@@ -44,6 +44,7 @@ namespace backend
             builder.Services.AddScoped<IKeyVaultService, EnvironmentKeyVaultService>();
             builder.Services.AddScoped<IScheduleAnalysisRepository, ScheduleAnalysisRepository>();
             builder.Services.AddScoped<IScheduleAnalysisService, ScheduleAnalysisService>();
+            builder.Services.AddScoped<IBsuirbotService, BsuirBotService>();
             builder.Services.AddHttpClient<IOpenRouterService, OpenRouterService>();
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -61,11 +61,11 @@ const TabItems = memo(({ mode, setMode }) => (
     </TabsTrigger>
     <TabsTrigger value="files" className="gap-2">
       <FileText className="h-4 w-4" />
-      Мои файлы
+      Знания пользователя
     </TabsTrigger>
     <TabsTrigger value="llm" className="gap-2">
       <Brain className="h-4 w-4" />
-      Общий AI
+      LLM
     </TabsTrigger>
   </TabsList>
 ))
