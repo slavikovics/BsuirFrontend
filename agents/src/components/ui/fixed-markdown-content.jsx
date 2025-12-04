@@ -19,7 +19,9 @@ import { useTheme } from '../providers/theme-provider';
  */
 const fixTextCodeBlocks = (content) => {
   if (!content) return content;
-
+  if (typeof content !== 'string') {
+  content = JSON.stringify(content, null, 2);
+  }
   let fixed = content.replace(/(?<!`)`([^`\n]+)`(?!`)/g, '**$1**');
   return fixed;
 };

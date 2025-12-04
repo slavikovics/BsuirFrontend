@@ -44,9 +44,13 @@ public class UserNotesController : ControllerBase
     {
         try
         {
-            request.UserId = GetUserId();
+            var userId = GetUserId();
 
-            var json = JsonSerializer.Serialize(request);
+            var json = JsonSerializer.Serialize(new
+            {
+                user_id = userId,
+                file_id = request.FileId
+            });
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var requestMessage = new HttpRequestMessage(HttpMethod.Delete, "db/delete")

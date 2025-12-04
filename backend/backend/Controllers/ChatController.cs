@@ -56,37 +56,44 @@ public class ChatController : ControllerBase
 
             return StatusCode(StatusCodes.Status500InternalServerError, new
             {
-                error = "Ошибка при обработке запроса",
+                error = "Ошибка при вызове BsuirBot API",
                 details = ex.Message
             });
         }
     }
 
-    [HttpPost("ask")]
+    [HttpPost("files")]
     public async Task<ActionResult<LlmResponseDto>> FilesChat([FromBody] ChatRequestDto request)
     {
-        var userId = GetUserId();
-        if (string.IsNullOrEmpty(userId.ToString()))
+        string? userId = GetUserId().ToString();
+        if (string.IsNullOrEmpty(userId))
             return Unauthorized(new { error = "User not authenticated" });
 
         try
         {
-            var generateRequest = new GenerateRequest
+            // создаём объект в snake_case, как ждёт Python
+            var pythonRequest = new
             {
-                UserId = userId.ToString()!,
-                Query = request.Request,
-                MaxFiles = 10
+                user_id = userId,
+                query = request.Request,
+                max_files = 10
             };
 
-            var json = JsonSerializer.Serialize(generateRequest);
+            var json = JsonSerializer.Serialize(
+                pythonRequest,
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+                });
+
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"/teacher/ask", content);
+            var response = await _httpClient.PostAsync("/teacher/ask", content);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError($"Error calling Python API /ask: {response.StatusCode} - {errorContent}");
+                _logger.LogError($"Python API error: {response.StatusCode} - {errorContent}");
 
                 return StatusCode((int)response.StatusCode, new
                 {
@@ -100,44 +107,13 @@ public class ChatController : ControllerBase
             using var doc = JsonDocument.Parse(resultJson);
             var root = doc.RootElement;
 
-            string answer = "";
-
-            if (root.TryGetProperty("teacher_response", out var teacherResponse))
-            {
-                answer = teacherResponse.GetString();
-            }
-            else if (root.TryGetProperty("answer", out var answerProp))
-            {
-                answer = answerProp.GetString();
-            }
-            else
-            {
-                answer = resultJson;
-            }
+            string answer = root.TryGetProperty("teacher_response", out var tr)
+                ? tr.GetString()
+                : root.TryGetProperty("answer", out var ans)
+                    ? ans.GetString()
+                    : resultJson;
 
             return Ok(new LlmResponseDto(answer));
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized(new { error = "User not authenticated" });
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "HTTP error calling Python API");
-            return StatusCode(502, new
-            {
-                error = "Failed to connect to Python API",
-                details = ex.Message
-            });
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "Error parsing Python API response");
-            return StatusCode(500, new
-            {
-                error = "Invalid response from Python API",
-                details = ex.Message
-            });
         }
         catch (Exception ex)
         {
@@ -145,6 +121,7 @@ public class ChatController : ControllerBase
             return StatusCode(500, new { error = ex.Message });
         }
     }
+
 
     [HttpPost("llm")]
     public async Task<ActionResult<LlmResponseDto>> LlmChat([FromBody] ChatRequestDto request)

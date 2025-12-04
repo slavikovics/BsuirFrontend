@@ -1,46 +1,24 @@
-// components/files/use-files.js
 import { useState, useEffect, useCallback } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8081";
+const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8080";
 
 export const useFiles = () => {
   const [files, setFiles] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState("list");
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // JWT
-  const getAuthToken = () => localStorage.getItem("jwt_token") || "";
-
-  // Получение userId из токена
-  const getUserIdFromToken = () => {
-    const token = getAuthToken();
-    if (!token) return null;
-
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      const payload = JSON.parse(jsonPayload);
-      return payload.nameid || payload.sub || payload.user_id;
-    } catch (err) {
-      console.error("Error decoding token:", err);
-      return null;
-    }
+  const getAuthToken = () => {
+    const token = localStorage.getItem("jwt_token");
+    return token || "";
   };
 
-  // Загрузка списка файлов
   const fetchFiles = useCallback(async () => {
     setLoading(true);
     setError(null);
+    console.log("Fetching files...");
 
     try {
       const token = getAuthToken();
@@ -49,13 +27,14 @@ export const useFiles = () => {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/Files/list?limit=100`, {
+      const response = await fetch(`${API_BASE_URL}/api/Files/list`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`
-          // без Content-Type!
-        },
-      });
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }});
+
+      console.log("Response status:", response.status);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -66,18 +45,49 @@ export const useFiles = () => {
       }
 
       const data = await response.json();
-      if (Array.isArray(data)) setFiles(data);
-      else if (data?.files) setFiles(data.files);
-      else setFiles(Object.values(data).find(Array.isArray) || []);
+      console.log("API response:", data);
+
+      // Проверяем структуру ответа
+      if (data.success && data.results && Array.isArray(data.results)) {
+        console.log(`Found ${data.results.length} files`);
+        
+        // Преобразуем данные в нужный формат
+        const formattedFiles = data.results.map(item => ({
+          ...item.payload, // все поля из payload
+          file_id: item.id, // добавляем id как file_id
+          id: item.id,      // также сохраняем как id для совместимости
+          // Переименовываем поля для единообразия
+          name: item.payload.filename,
+          filename: item.payload.filename,
+          size: item.payload.file_size,
+          file_size: item.payload.file_size,
+          upload_date: item.payload.uploaded_at,
+          uploaded_at: item.payload.uploaded_at,
+          user_id: item.payload.user_id
+        }));
+        
+        console.log("Formatted files:", formattedFiles);
+        setFiles(formattedFiles);
+      } else {
+        console.log("Invalid response format or no files:", data);
+        setFiles([]);
+      }
     } catch (err) {
-      setError(err.message);
+      console.error("Fetch error:", err);
+      setError(err.message || "Ошибка загрузки файлов");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    getAuthToken() ? fetchFiles() : setError("Требуется авторизация");
+    const token = getAuthToken();
+    if (token) {
+      fetchFiles();
+    } else {
+      setError("Требуется авторизация");
+      setLoading(false);
+    }
   }, [fetchFiles]);
 
   // Загрузка файла
@@ -89,36 +99,21 @@ export const useFiles = () => {
       const token = getAuthToken();
       if (!token) throw new Error("Требуется авторизация");
 
-      // ДЕБАГ: Проверяем содержимое FormData перед отправкой
-      for (const pair of formData.entries()) {
-        console.log("FormData:", pair[0], pair[1]);
-      }
-
-      console.log("HEADERS SENT:", [...formData.entries()]);
-console.log("FETCH OPTIONS:", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-  body: formData,
-});
-
       const response = await fetch(`${API_BASE_URL}/api/Files/add`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}` // НЕ ставить Content-Type
+          "Authorization": `Bearer ${token}`
         },
         body: formData,
       });
-
-      console.log("REQUEST HEADERS (actual):", response);
-
 
       if (!response.ok) {
         throw new Error(await response.text());
       }
 
       const result = await response.json();
+      console.log("Upload result:", result);
+      
       await fetchFiles();
       setShowUploadForm(false);
       return result;
@@ -130,22 +125,23 @@ console.log("FETCH OPTIONS:", {
     }
   };
 
-  // Удаление
+  // Удаление файла
   const deleteFile = async (fileId) => {
     try {
       const token = getAuthToken();
-      const userId = getUserIdFromToken();
-
       if (!token) throw new Error("Требуется авторизация");
-      if (!userId) throw new Error("Не удалось определить пользователя");
+
+      console.log("Deleting file:", { file_id: fileId });
 
       const response = await fetch(`${API_BASE_URL}/api/Files/delete`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ file_id: fileId, user_id: userId }),
+        body: JSON.stringify({ 
+          FileId: fileId
+        }),
       });
 
       if (!response.ok) {
@@ -153,6 +149,8 @@ console.log("FETCH OPTIONS:", {
       }
 
       const result = await response.json();
+      console.log("Delete result:", result);
+      
       await fetchFiles();
       return result;
     } catch (err) {
@@ -161,40 +159,17 @@ console.log("FETCH OPTIONS:", {
     }
   };
 
-  // Скачивание
-  const downloadFile = async (file) => {
-    try {
-      const token = getAuthToken();
-      if (!token) throw new Error("Требуется авторизация");
-
-      if (file.direct_url) {
-        window.open(file.direct_url, "_blank");
-        return;
-      }
-
-      console.log("Download file:", file);
-      alert(`Скачивание для "${file.filename}" пока не реализовано`);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
   return {
     files,
     searchTerm,
-    viewMode,
     isUploading,
     showUploadForm,
     loading,
     error,
-
     setSearchTerm,
-    setViewMode,
     setShowUploadForm,
-
     handleUploadFile: uploadFile,
     handleDeleteFile: deleteFile,
-    handleDownloadFile: downloadFile,
     refreshFiles: fetchFiles,
     clearError: () => setError(null),
   };

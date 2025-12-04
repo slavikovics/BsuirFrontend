@@ -194,16 +194,15 @@ public class FilesController : ControllerBase
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            if (request.UserId != userId)
-            {
-                return Forbid();
-            }
-
             using var httpClient = _httpClientFactory.CreateClient();
 
             var url = $"{PythonApiBaseUrl}/db/delete";
 
-            var jsonContent = JsonSerializer.Serialize(request);
+            var jsonContent = JsonSerializer.Serialize(new
+            {
+                user_id = userId,
+                file_id = request.FileId
+            });
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
             var httpRequest = new HttpRequestMessage(HttpMethod.Delete, url)

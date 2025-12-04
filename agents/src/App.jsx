@@ -1,7 +1,7 @@
 // App.jsx
 import { Header } from "./components/ui/header"
 import { Schedule } from './components/ui/schedule/index'
-import { FilesSection } from './components/ui/files/files-section'
+import { FilesSection } from './components/ui/files/FilesSection'
 import { InfoSection } from './components/ui/info'
 import { TestPage } from './components/ui/test/index'
 import { Chat } from './components/ui/chat/chat'

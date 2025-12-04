@@ -1,126 +1,203 @@
 // components/ui/test/index.jsx
-import { useState, useEffect } from "react"
-import { TestStartScreen } from "./test-start-screen"
-import { TestQuestions } from "./test-questions"
-import { TestResults } from "./test-results"
+import { useState } from "react";
+import { TestStartScreen } from "./test-start-screen";
+import { TestQuestions } from "./test-questions";
+import { TestResults } from "./test-results";
+
+const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:8081";
 
 export function TestPage() {
-  const [testState, setTestState] = useState("start") // start, loading, questions, results
-  const [testData, setTestData] = useState(null)
-  const [userAnswers, setUserAnswers] = useState({})
-  const [results, setResults] = useState(null)
-  const [userId] = useState("default_user") // В реальном приложении брать из контекста/авторизации
+  const [testState, setTestState] = useState("start"); // start, loading, questions, results
+  const [testData, setTestData] = useState(null);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [results, setResults] = useState(null);
+
+  const getToken = () => localStorage.getItem("jwt_token") || "";
+
+  const parseTestData = (data) => {
+    // Если пришел уже парсированный массив
+    if (Array.isArray(data)) {
+      return data.map(item => {
+        // Проверяем, что answers - это массив объектов
+        if (item.answers && Array.isArray(item.answers)) {
+          return {
+            question: item.question || '',
+            answers: item.answers.map(answerObj => {
+              // Преобразуем объект вида {"текст ответа": 0/1} в более удобный формат
+              const entries = Object.entries(answerObj)[0] || ['', 0];
+              return {
+                text: entries[0],
+                isCorrect: entries[1] === 1
+              };
+            })
+          };
+        }
+        return item;
+      });
+    }
+    
+    // Если пришел объект с вложенным массивом
+    if (data?.tests && Array.isArray(data.tests)) {
+      return parseTestData(data.tests);
+    }
+    
+    // Если пришел JSON-строка
+    if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        return parseTestData(parsed);
+      } catch (e) {
+        console.error("Ошибка парсинга JSON:", e);
+        return [];
+      }
+    }
+    
+    return [];
+  };
 
   const startTest = async (testParams) => {
     try {
-      setTestState("loading")
-      
-      // Здесь будет реальный запрос к API
-      // const response = await fetch('/api/generate-tests', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     user_id: userId,
-      //     query: testParams.query,
-      //     max_files: testParams.maxFiles
-      //   })
-      // });
-      // const data = await response.json();
-      
-      // Для демонстрации используем тест-заглушку
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Тест-заглушка для разработки
-      const mockTest = [
-        {
-          question: "Что такое React?",
-          answers: [
-            { "Библиотека для построения пользовательских интерфейсов": 1 },
-            { "Фреймворк для backend разработки": 0 },
-            { "Язык программирования": 0 },
-            { "Система управления базами данных": 0 }
-          ]
+      setTestState("loading");
+
+      const token = getToken();
+      if (!token) throw new Error("Требуется авторизация");
+
+      const payload = {
+        Query: testParams.query,
+        MaxFiles: testParams.maxFiles || 10
+      };
+
+      console.log("Отправка запроса с payload:", payload);
+
+      const res = await fetch(`${API_BASE_URL}/api/test/generate-and-get`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
-        {
-          question: "Какой хук используется для управления состоянием в функциональных компонентах?",
-          answers: [
-            { "useState": 1 },
-            { "useEffect": 0 },
-            { "useContext": 0 },
-            { "useReducer": 0 }
-          ]
-        },
-        {
-          question: "Что такое виртуальный DOM?",
-          answers: [
-            { "Легковесная копия реального DOM": 1 },
-            { "Специальный сервер для рендеринга": 0 },
-            { "Браузерный API": 0 },
-            { "Тип базы данных": 0 }
-          ]
-        }
-      ]
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Ошибка от сервера:", text);
+        throw new Error(text || `Ошибка генерации: ${res.status}`);
+      }
+
+      let data;
+      const responseText = await res.text();
+      console.log("Ответ сервера:", responseText);
       
-      setTestData(mockTest)
-      setTestState("questions")
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Ошибка парсинга JSON ответа:", e);
+        // Попробуем почистить JSON
+        const cleanedJson = responseText.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+        data = JSON.parse(cleanedJson);
+      }
+
+      // Парсим тестовые данные в удобный формат
+      const parsedData = parseTestData(data);
+      console.log("Парсированные данные:", parsedData);
+
+      if (!parsedData || parsedData.length === 0) {
+        throw new Error("Пустой тест получен от сервера");
+      }
+
+      setTestData(parsedData);
+      setUserAnswers({}); // сброс прошлых ответов
+      setResults(null);
+      setTestState("questions");
     } catch (error) {
-      console.error("Ошибка при загрузке теста:", error)
-      setTestState("start")
+      console.error("Ошибка при загрузке теста:", error);
+      alert(error.message || "Ошибка при загрузке теста");
+      setTestState("start");
     }
-  }
+  };
 
   const handleAnswerSelect = (questionIndex, answerIndex) => {
     setUserAnswers(prev => ({
       ...prev,
       [questionIndex]: answerIndex
-    }))
-  }
+    }));
+  };
 
   const submitTest = async () => {
     try {
-      setTestState("loading")
-      
-      // Подготавливаем ответы для отправки
-      const formattedAnswers = testData.map((question, index) => ({
-        question: question.question,
-        user_answer: Object.keys(question.answers[userAnswers[index] || 0])[0],
-        correct: Object.values(question.answers[userAnswers[index] || 0])[0] === 1
-      }))
+      setTestState("loading");
 
-      // Здесь будет реальный запрос к API
-      // const response = await fetch(`/api/result?user_id=${userId}`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formattedAnswers)
-      // });
-      // const data = await response.json();
-      
-      // Для демонстрации используем моковый ответ
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const mockResults = {
-        analysis: "**Результаты тестирования:**\n\nВы показали хорошее понимание основ React. Особенно хорошо усвоены концепции хуков и виртуального DOM. Рекомендуется обратить внимание на более сложные паттерны, такие как контекст и оптимизация производительности. В целом, уровень подготовки можно оценить как достаточный для продолжения изучения.\n\nДля улучшения результатов рекомендую:\n1. Практиковаться с реальными проектами\n2. Изучить React Router для маршрутизации\n3. Освоить управление состоянием с помощью Redux или Context API",
-        correctAnswers: [0, 0, 0], // Индексы правильных ответов
-        userAnswers: Object.values(userAnswers)
+      if (!testData || testData.length === 0) {
+        throw new Error("Нет данных теста для отправки");
       }
-      
-      setResults(mockResults)
-      setTestState("results")
+
+      // Подготавливаем ответы для отправки
+      const formattedAnswers = testData.map((question, index) => {
+        const chosenIndex = userAnswers[index] !== undefined ? userAnswers[index] : null;
+        const chosenAnswer = chosenIndex !== null ? question.answers[chosenIndex] : null;
+        
+        return {
+          question: question.question,
+          user_answer: chosenAnswer ? chosenAnswer.text : "Нет ответа",
+          correct: chosenAnswer ? chosenAnswer.isCorrect : false
+        };
+      });
+
+      console.log("Отправляемые ответы:", formattedAnswers);
+
+      const token = getToken();
+      if (!token) throw new Error("Требуется авторизация");
+
+      const res = await fetch(`${API_BASE_URL}/api/test/result`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formattedAnswers)
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Ошибка при отправке результатов: ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Создаем correctAnswers для отображения результатов
+      const correctAnswers = testData.map(q => {
+        const idx = q.answers.findIndex(a => a.isCorrect);
+        return idx === -1 ? 0 : idx;
+      });
+
+      const userAnswersArray = testData.map((_, idx) => {
+        return userAnswers[idx] !== undefined ? userAnswers[idx] : null;
+      });
+
+      const resultsObj = {
+        analysis: data.analysis || data?.analysis || (typeof data === 'string' ? data : ''),
+        correctAnswers,
+        userAnswers: userAnswersArray
+      };
+
+      setResults(resultsObj);
+      setTestState("results");
     } catch (error) {
-      console.error("Ошибка при отправке теста:", error)
-      setTestState("questions")
+      console.error("Ошибка при отправке теста:", error);
+      alert(error.message || "Ошибка при отправке теста");
+      setTestState("questions");
     }
-  }
+  };
 
   const restartTest = () => {
-    setTestState("start")
-    setTestData(null)
-    setUserAnswers({})
-    setResults(null)
-  }
+    setTestState("start");
+    setTestData(null);
+    setUserAnswers({});
+    setResults(null);
+  };
 
   if (testState === "start") {
-    return <TestStartScreen onStart={startTest} />
+    return <TestStartScreen onStart={startTest} />;
   }
 
   if (testState === "loading") {
@@ -131,7 +208,7 @@ export function TestPage() {
           <p className="mt-4 text-muted-foreground">Загрузка...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (testState === "questions") {
@@ -142,7 +219,7 @@ export function TestPage() {
         onAnswerSelect={handleAnswerSelect}
         onSubmit={submitTest}
       />
-    )
+    );
   }
 
   if (testState === "results") {
@@ -153,8 +230,8 @@ export function TestPage() {
         userAnswers={userAnswers}
         onRestart={restartTest}
       />
-    )
+    );
   }
 
-  return null
+  return null;
 }
