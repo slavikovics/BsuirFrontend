@@ -60,9 +60,12 @@ const authFetch = async (url, options = {}) => {
   }
 
   const headers = {
-    ...options.headers,
-    "Content-Type": "application/json",
+    ...options.headers
   };
+
+  if (!(options.body instanceof FormData)) {
+  headers["Content-Type"] = "application/json";
+}
 
   // Add Authorization header for non-auth endpoints
   if (token && !url.includes('/api/auth/')) {

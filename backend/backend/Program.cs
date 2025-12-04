@@ -36,6 +36,7 @@ namespace backend
             });
 
             builder.Services.AddSingleton<IKeyVaultService, EnvironmentKeyVaultService>();
+            builder.Services.AddTransient<IRagInitializationService, RagInitializationService>();
 
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IUserService, UserService>();
@@ -46,6 +47,11 @@ namespace backend
             builder.Services.AddScoped<IScheduleAnalysisService, ScheduleAnalysisService>();
             builder.Services.AddScoped<IBsuirbotService, BsuirBotService>();
             builder.Services.AddHttpClient<IOpenRouterService, OpenRouterService>();
+
+            var serviceProvider = builder.Services.BuildServiceProvider();
+            var ragService = serviceProvider.GetRequiredService<IRagInitializationService>();
+
+            Task.Run(() => { ragService.InitializeRag(); });
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>

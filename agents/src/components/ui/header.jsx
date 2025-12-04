@@ -3,16 +3,17 @@ import React, { useState } from "react";
 import { Button } from "./button";
 import { ThemeToggle } from "./theme-toggle";
 import { AuthComponent } from "./auth-component";
-import { BookOpen, GraduationCap, Info, MessageSquare, Menu, X } from "lucide-react";
+import { BookOpen, GraduationCap, Info, MessageSquare, Menu, X, FileQuestion } from "lucide-react";
 
 export const Header = ({ activeTab, onTabChange }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigationItems = [
     { id: "schedule", label: "Расписание", icon: BookOpen },
-    { id: "knowledge", label: "Знания", icon: GraduationCap },
+    { id: "files", label: "Файлы", icon: GraduationCap },
     { id: "info", label: "О проекте", icon: Info },
     { id: "chat", label: "RAG-чат", icon: MessageSquare },
+    { id: "test", label: "Тестирование", icon: FileQuestion },
   ];
 
   return (

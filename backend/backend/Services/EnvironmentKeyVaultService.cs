@@ -32,6 +32,11 @@ public class EnvironmentKeyVaultService : IKeyVaultService
         return GetSecretAsync("JWT_AUDIENCE", "Jwt:Audience", "react-app");
     }
 
+    public Task<string> GetBaseUrlAsync()
+    {
+        return GetSecretAsync("RAG_BASE_URL", "Rag:Url", "http://host.docker.internal:8500");
+    }
+
     public Task<string> GetOpenRouterApiKeyAsync()
     {
         return GetSecretAsync("OPENROUTER_API_KEY", "OpenRouter:ApiKey");
