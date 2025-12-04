@@ -7,7 +7,8 @@ import { TaskPopup } from "./task-popup"
 import { useSchedule } from "./use-schedule"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select"
 import { useAuth } from "../auth-component"
-import { ScheduleAnalysis } from "./schedule-analysis" // ← ДОБАВЛЯЕМ КОМПОНЕНТ АНАЛИЗА
+import { ScheduleAnalysis } from "./schedule-analysis"
+import { ConsultationComponent } from "./consultation-component"
 
 export const Schedule = () => {
   const { user } = useAuth()
@@ -150,6 +151,8 @@ export const Schedule = () => {
         data={analysisData}
         isLoading={isAnalysisLoading}
       />
+
+      <ConsultationComponent/>
 
       <div className="text-center mt-4">
         <p className="text-sm text-muted-foreground">

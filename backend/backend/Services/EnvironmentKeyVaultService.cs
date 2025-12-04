@@ -37,6 +37,11 @@ public class EnvironmentKeyVaultService : IKeyVaultService
         return GetSecretAsync("RAG_BASE_URL", "Rag:Url", "http://host.docker.internal:8500");
     }
 
+    public Task<string> GetConsultUrlAsync()
+    {
+        return GetSecretAsync("CONSULT_URL", "Consult:Url", "http://host.docker.internal:3000");
+    }
+
     public Task<string> GetOpenRouterApiKeyAsync()
     {
         return GetSecretAsync("OPENROUTER_API_KEY", "OpenRouter:ApiKey");

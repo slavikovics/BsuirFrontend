@@ -7,6 +7,7 @@ public interface IKeyVaultService
     Task<string> GetJwtIssuerAsync();
     Task<string> GetJwtAudienceAsync();
     Task<string> GetBaseUrlAsync();
+    Task<string> GetConsultUrlAsync();
     
     Task<string> GetOpenRouterApiKeyAsync();
     Task<string> GetOpenRouterModelAsync();
