@@ -1,65 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <title>Bsuir bot</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles/main-content.css">
-    <link rel="stylesheet" href="styles/chat.css">
-    <link rel="stylesheet" href="styles/user-input.css">
-    <link rel="stylesheet" href="styles/buttons.css">
-    <link rel="stylesheet" href="styles/glow-animations.css">
-    <link rel="stylesheet" href="styles/body.css">
-    <link rel="stylesheet" href="styles/markdown-styles.css">
-    <link rel="stylesheet" href="styles/button-animation.css">
-    <link rel="stylesheet" href="styles/side-nav.css">
-</head>
-<body>
-    <div class="sidenav collapsed" id="sidenav">
-        <div class="logo">
-            <img class="logo-image" width="40%" height="40%" src="resources/logo.png"/>
-            <h5>Интеллектуальный ассистент по университету</h5>
-        </div>
-        <button class="button sidenav-section-button">
-            <a class="nav-link" href="#chat">Чат</a>
-        </button>
-        <button class="button sidenav-section-button">
-            <a class="nav-link" href="https://github.com/slavikovics/BsuirFrontend/tree/main">Об ассистенте</a>
-        </button>
-        <button class="button sidenav-section-button" id="clear-history">
-            Очистить историю
-        </button>
-        <button class="sidenav-section-button button" id="toggleClose">
-            <img class="ui"  src="resources/open.svg" alt="Expand" width="28" height="28" style="transform: rotate(180deg);"/>
-        </button>
-    </div>
-    <div class="main-content" id="mainContent">
-        <div class="chat-container" id="chat-container">
-        </div>
-        <div class="chat-input-container">
-            <button class="button" id="toggleOpen">
-                <img class="ui" src="resources/open.svg" alt="Expand" width="28" height="28"/>
-            </button>
-            <div contenteditable="true" type="text" id="user-input" placeholder="Введите ваше сообщение..."></div>
-            <button class="button" id="send-button">
-                <img class="ui" id="send-button-image" src="resources/send.svg" alt="Send" width="28" height="28"/>
-                <span class="btn-spinner hidden">
-                    <span class="spinner-dot"></span>
-                    <span class="spinner-dot"></span>
-                    <span class="spinner-dot"></span>
-                </span>
-            </button>
-        </div>
-    </div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>agents</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
-
-<script type="module" src="scripts/markdown.js"></script>
-<script type="module" src="scripts/button-animation.js"></script>
-<script type="module" src="config.js"></script>
-<script type="module" src="scripts/open-router.js"></script>
-<script type="module" src="scripts/chat-animations.js"></script>
-<script type="module" src="scripts/bot-message-animation.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script type="module" src="scripts/main.js"></script>
-
