@@ -44,13 +44,19 @@ public class OpenRouterService : IOpenRouterService
                         role = "user",
                         content = prompt
                     }
+                },
+                reasoning = new
+                {
+                    enabled = true
                 }
             };
 
             var json = JsonSerializer.Serialize(requestData);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
+            _logger.LogInformation($"Sending request to OpenRouterAPI: {json}");
 
             var response = await _httpClient.PostAsync("chat/completions", content);
+            _logger.LogInformation($"OpenRouter Response: {response}");
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
